@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import time
 from supabase import create_client
 from logic import PartyMonitor
 from visualization import (
@@ -8,11 +9,13 @@ from visualization import (
     plot_class_distribution,
     plot_campus_distribution,
 )
+from streamlit_autorefresh import st_autorefresh
 from rapidfuzz import process
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
+
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -46,13 +49,8 @@ check_auth()
 
 
 # Fetch guest data from Supabase
-@st.cache_data(ttl=5)  # Cache for 5 seconds
 def load_guest_data():
-    response = (
-        supabase.table("guests")
-        .select("name, brother, check_in_status, campus_status")
-        .execute()
-    )
+    response = supabase.table("guests").select("*").execute()
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
@@ -60,36 +58,12 @@ def load_guest_data():
 if "monitor" not in st.session_state:
     st.session_state.monitor = PartyMonitor()
 
-if "guest_data" not in st.session_state:
-    st.session_state.guest_data = load_guest_data()
+st.session_state.guest_data = load_guest_data()
 
 st.title("SNOWYOWL")
 
-
-# Real-time listener for guest check-in/out updates
-def handle_update(payload):
-    updated_name = payload["new"]["name"]  # Get the updated guest name
-    updated_row = (
-        supabase.table("guests").select("*").eq("name", updated_name).execute()
-    )
-
-    if updated_row.data:
-        index = st.session_state.guest_data.index[
-            st.session_state.guest_data["name"] == updated_name
-        ].tolist()
-        if index:
-            st.session_state.guest_data.iloc[index[0]] = updated_row.data[
-                0
-            ]  # Update only the changed row
-        else:
-            st.session_state.guest_data = st.session_state.guest_data.append(
-                updated_row.data[0], ignore_index=True
-            )
-
-    st.rerun()
-
-
-supabase.table("guests").on("UPDATE", handle_update).subscribe()
+# Auto-refresh every 2 seconds
+st_autorefresh(interval=2000, key="data_refresh")
 
 # File Uploaders in Sidebar
 st.sidebar.header("📂 Guest Lists")
@@ -167,9 +141,13 @@ with tab2:
                         {"check_in_status": "Checked In"}
                     ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked in!")
+                    time.sleep(1)
+                    st.rerun()
             else:
                 if col2.button("❌ Check Out", key=f"checkout_{index}"):
                     supabase.table("guests").update(
                         {"check_in_status": "Not Checked In"}
                     ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked out!")
+                    time.sleep(1)
+                    st.rerun()
