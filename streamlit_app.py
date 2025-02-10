@@ -63,7 +63,7 @@ if "monitor" not in st.session_state:
 
 st.session_state.guest_data = load_guest_data()
 
-st.title("🎉 Party Monitor Dashboard")
+st.title("SNOWYOWL")
 
 # Auto-refresh every 2 seconds
 st_autorefresh(interval=2000, key="data_refresh")
