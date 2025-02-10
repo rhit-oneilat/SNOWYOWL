@@ -45,8 +45,8 @@ def check_auth():
 check_auth()
 
 
-# Optimize Supabase queries with indexing and incremental updates
-@st.cache_data(ttl=5)
+# Fetch guest data from Supabase
+@st.cache_data(ttl=5)  # Cache for 5 seconds
 def load_guest_data():
     response = (
         supabase.table("guests")
@@ -56,18 +56,6 @@ def load_guest_data():
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
-# Incremental updates rather than full refresh
-def update_guest_status(name, status):
-    supabase.table("guests").update({"check_in_status": status}).eq(
-        "name", name
-    ).execute()
-    st.session_state.guest_data.loc[
-        st.session_state.guest_data["name"] == name, "check_in_status"
-    ] = status
-    st.rerun()
-
-
-# ---------------- Streamlit App ----------------
 # Initialize session state
 if "monitor" not in st.session_state:
     st.session_state.monitor = PartyMonitor()
@@ -80,11 +68,24 @@ st.title("SNOWYOWL")
 
 # Real-time listener for guest check-in/out updates
 def handle_update(payload):
-    updated_name = payload["new"]["name"]
-    updated_status = payload["new"]["check_in_status"]
-    st.session_state.guest_data.loc[
-        st.session_state.guest_data["name"] == updated_name, "check_in_status"
-    ] = updated_status
+    updated_name = payload["new"]["name"]  # Get the updated guest name
+    updated_row = (
+        supabase.table("guests").select("*").eq("name", updated_name).execute()
+    )
+
+    if updated_row.data:
+        index = st.session_state.guest_data.index[
+            st.session_state.guest_data["name"] == updated_name
+        ].tolist()
+        if index:
+            st.session_state.guest_data.iloc[index[0]] = updated_row.data[
+                0
+            ]  # Update only the changed row
+        else:
+            st.session_state.guest_data = st.session_state.guest_data.append(
+                updated_row.data[0], ignore_index=True
+            )
+
     st.rerun()
 
 
@@ -162,7 +163,13 @@ with tab2:
             )
             if row["check_in_status"] == "Not Checked In":
                 if col2.button("✅ Check In", key=f"checkin_{index}"):
-                    update_guest_status(row["name"], "Checked In")
+                    supabase.table("guests").update(
+                        {"check_in_status": "Checked In"}
+                    ).eq("name", row["name"]).execute()
+                    st.success(f"{row['name']} has been checked in!")
             else:
                 if col2.button("❌ Check Out", key=f"checkout_{index}"):
-                    update_guest_status(row["name"], "Not Checked In")
+                    supabase.table("guests").update(
+                        {"check_in_status": "Not Checked In"}
+                    ).eq("name", row["name"]).execute()
+                    st.success(f"{row['name']} has been checked out!")
