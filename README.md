@@ -39,9 +39,6 @@ The **Party Monitor** system is a **multi-user guest management and check-in app
 - **Improve Search Functionality**: Fix current case-sensitivity issue (currently only works with all-caps queries).
 - **Refine Check-In Page UI**: Enhance usability for faster guest processing.
 - **Ensure Guest List Updates Work Seamlessly**: Resolve any CSV upload issues to maintain data integrity.
-- **Secure the Repository**:
-    - Remove sensitive logic from the public repo while maintaining necessary functionality.
-    - Apply a **restrictive license** to protect intellectual property.
 
 ---
 
