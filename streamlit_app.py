@@ -10,6 +10,7 @@ from visualization import (
     plot_campus_distribution,
 )
 from streamlit_autorefresh import st_autorefresh
+from search_component import SearchState, create_search_component  # Add this import
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -22,7 +23,6 @@ USERNAME = "door"
 PASSWORD = "pgd1848"
 
 
-# Authentication function
 def check_auth():
     if "authenticated" not in st.session_state:
         st.session_state.authenticated = False
@@ -40,34 +40,23 @@ def check_auth():
                 else:
                     st.error("Invalid credentials")
 
-        st.stop()  # Prevents further execution until login
+        st.stop()
 
 
 check_auth()
-
-
-# Fetch guest data from Supabase
-def load_guest_data(search_query=None, status_filter=None, location_filter=None):
-    query = supabase.table("guests").select("*")
-
-    if search_query:
-        query = query.text_search("name_tsv", search_query)  # Correct FTS usage
-
-    if status_filter and status_filter != "All":
-        query = query.eq("check_in_status", status_filter)  # Uses index
-
-    if location_filter and location_filter != "All":
-        query = query.eq("campus_status", location_filter)  # Uses index
-
-    response = query.execute()
-    return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-
 
 # Initialize session state
 if "monitor" not in st.session_state:
     st.session_state.monitor = PartyMonitor()
 
-st.session_state.guest_data = load_guest_data()
+
+# Modified to load initial data without filters
+def load_initial_data():
+    response = supabase.table("guests").select("*").execute()
+    return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
+
+st.session_state.guest_data = load_initial_data()
 
 st.title("SNOWYOWL")
 
@@ -107,38 +96,60 @@ with tab2:
         st.info("No guest data available.")
     else:
         st.subheader("Guest List & Check-In")
-        search_query = st.text_input("Search Guest by Name")
 
-        status_filter = st.selectbox(
-            "Filter by Status", ["All", "Checked In", "Not Checked In"]
-        )
-        location_filter = st.selectbox(
-            "Filter by Location", ["All", "On Campus", "Off Campus"]
-        )
+        # Use the new search component
+        search_state = create_search_component()
 
-        # Fetch filtered data directly from Supabase
-        filtered_df = load_guest_data(search_query, status_filter, location_filter)
+        # Load filtered data
+        def load_filtered_data(search_state: SearchState):
+            query = supabase.table("guests").select("*")
+
+            if search_state.query:
+                query = query.text_search("name_tsv", search_state.query)
+
+            if search_state.status_filter != "all":
+                status_map = {
+                    "checked-in": "Checked In",
+                    "not-checked-in": "Not Checked In",
+                }
+                query = query.eq(
+                    "check_in_status", status_map[search_state.status_filter]
+                )
+
+            if search_state.location_filter != "all":
+                location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
+                query = query.eq(
+                    "campus_status", location_map[search_state.location_filter]
+                )
+
+            response = query.execute()
+            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
+        filtered_df = load_filtered_data(search_state)
 
         # Display Table
         st.write("### Guest List")
-        for index, row in filtered_df.iterrows():
-            col1, col2 = st.columns([4, 1])
-            col1.write(
-                f"**{row['name']}** (Brother: {row['brother']}, Status: {row['check_in_status']})"
-            )
-            if row["check_in_status"] == "Not Checked In":
-                if col2.button("✅ Check In", key=f"checkin_{index}"):
-                    supabase.table("guests").update(
-                        {"check_in_status": "Checked In"}
-                    ).eq("name", row["name"]).execute()
-                    st.success(f"{row['name']} has been checked in!")
-                    time.sleep(1)
-                    st.rerun()
-            else:
-                if col2.button("❌ Check Out", key=f"checkout_{index}"):
-                    supabase.table("guests").update(
-                        {"check_in_status": "Not Checked In"}
-                    ).eq("name", row["name"]).execute()
-                    st.success(f"{row['name']} has been checked out!")
-                    time.sleep(1)
-                    st.rerun()
+        if filtered_df.empty:
+            st.info("No guests found matching your search criteria.")
+        else:
+            for index, row in filtered_df.iterrows():
+                col1, col2 = st.columns([4, 1])
+                col1.write(
+                    f"**{row['name']}** (Brother: {row['brother']}, Status: {row['check_in_status']})"
+                )
+                if row["check_in_status"] == "Not Checked In":
+                    if col2.button("✅ Check In", key=f"checkin_{index}"):
+                        supabase.table("guests").update(
+                            {"check_in_status": "Checked In"}
+                        ).eq("name", row["name"]).execute()
+                        st.success(f"{row['name']} has been checked in!")
+                        time.sleep(1)
+                        st.rerun()
+                else:
+                    if col2.button("❌ Check Out", key=f"checkout_{index}"):
+                        supabase.table("guests").update(
+                            {"check_in_status": "Not Checked In"}
+                        ).eq("name", row["name"]).execute()
+                        st.success(f"{row['name']} has been checked out!")
+                        time.sleep(1)
+                        st.rerun()
