@@ -67,6 +67,7 @@ def update_guest_status(name, status):
     st.rerun()
 
 
+# ---------------- Streamlit App ----------------
 # Initialize session state
 if "monitor" not in st.session_state:
     st.session_state.monitor = PartyMonitor()
