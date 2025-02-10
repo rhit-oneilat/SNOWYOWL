@@ -10,12 +10,10 @@ from visualization import (
     plot_campus_distribution,
 )
 from streamlit_autorefresh import st_autorefresh
-from rapidfuzz import process
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
-
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -49,8 +47,19 @@ check_auth()
 
 
 # Fetch guest data from Supabase
-def load_guest_data():
-    response = supabase.table("guests").select("*").execute()
+def load_guest_data(search_query=None, status_filter=None, location_filter=None):
+    query = supabase.table("guests").select("*")
+
+    if search_query:
+        query = query.text_search("name_tsv", search_query)  # Correct FTS usage
+
+    if status_filter and status_filter != "All":
+        query = query.eq("check_in_status", status_filter)  # Uses index
+
+    if location_filter and location_filter != "All":
+        query = query.eq("campus_status", location_filter)  # Uses index
+
+    response = query.execute()
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
@@ -107,26 +116,8 @@ with tab2:
             "Filter by Location", ["All", "On Campus", "Off Campus"]
         )
 
-        filtered_df = st.session_state.guest_data.copy()
-
-        # Apply search filter
-        if search_query:
-            guest_names = filtered_df["name"].dropna().astype(str).tolist()
-            matches = process.extract(search_query, guest_names, limit=5)
-            matched_names = [match[0] for match in matches if match[1] > 70]
-
-            if matched_names:
-                filtered_df = filtered_df[filtered_df["name"].isin(matched_names)]
-            else:
-                st.warning("No matching guests found.")
-                filtered_df = pd.DataFrame()
-
-        # Apply dropdown filters
-        if status_filter != "All":
-            filtered_df = filtered_df[filtered_df["check_in_status"] == status_filter]
-
-        if location_filter != "All":
-            filtered_df = filtered_df[filtered_df["campus_status"] == location_filter]
+        # Fetch filtered data directly from Supabase
+        filtered_df = load_guest_data(search_query, status_filter, location_filter)
 
         # Display Table
         st.write("### Guest List")
