@@ -12,9 +12,8 @@ from visualization import (
 from database import initialize_db
 from streamlit_autorefresh import st_autorefresh
 from rapidfuzz import process
-import psutil
 
-print(f"Memory Usage: {psutil.Process().memory_info().rss / 1024**2:.2f} MB")
+# print(f"Memory Usage: {psutil.Process().memory_info().rss / 1024**2:.2f} MB")
 
 
 # Hardcoded username and password
