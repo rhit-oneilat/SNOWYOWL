@@ -9,8 +9,8 @@ from visualization import (
     plot_class_distribution,
     plot_campus_distribution,
 )
-from streamlit_autorefresh import st_autorefresh
-from search_component import SearchState, create_search_component  # Add this import
+from streamlit_autorefresh import st_autorefresh  # type: ignore
+from search_component import SearchState, create_search_component
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -67,6 +67,57 @@ st_autorefresh(interval=10000, key="data_refresh")
 st.sidebar.header("📂 Guest Lists")
 on_campus_file = st.sidebar.file_uploader("Upload On-Campus Guest List", type=["csv"])
 off_campus_file = st.sidebar.file_uploader("Upload Off-Campus Guest List", type=["csv"])
+
+if on_campus_file and off_campus_file:
+    # Read CSVs
+    on_campus_df = pd.read_csv(on_campus_file)
+    off_campus_df = pd.read_csv(off_campus_file)
+
+    # Process guests
+    on_melted = on_campus_df.melt(var_name="brother", value_name="name").dropna()
+    off_melted = off_campus_df.melt(var_name="brother", value_name="name").dropna()
+
+    on_melted["campus_status"] = "On Campus"
+    off_melted["campus_status"] = "Off Campus"
+
+    all_guests = pd.concat([on_melted, off_melted])
+
+    # Standardize guest names
+    all_guests["name"] = all_guests["name"].str.upper()
+
+    # Load fraternity brother data for class years
+    brothers_data = pd.read_csv("brothers.csv")
+
+    # Merge guest data with class years
+    guests_with_brothers = all_guests.merge(brothers_data, on="brother", how="left")
+
+    # Assign check-in status
+    guests_with_brothers["check_in_status"] = "Not Checked In"
+
+    # Convert to dictionary for Supabase upsert
+    guest_records = guests_with_brothers.to_dict(orient="records")
+
+    # Upsert into Supabase
+    supabase.table("guests").upsert(guest_records).execute()
+
+    # Refresh the data
+    st.session_state.guest_data = load_initial_data()
+    st.success("Guest list updated successfully!")
+    time.sleep(1)
+    st.rerun()
+
+# Get current guests in the database
+existing_guest_data = load_initial_data()
+
+# Find guests in the database but NOT in the new upload
+to_delete = existing_guest_data[
+    ~existing_guest_data["name"].isin(guests_with_brothers["name"])
+]
+
+# Bulk delete missing guests
+if not to_delete.empty:
+    supabase.table("guests").delete().in_("name", to_delete["name"].tolist()).execute()
+
 
 # Create tabs
 tab1, tab2 = st.tabs(["📊 Dashboard", "📜 Guest List & Check-In"])
@@ -142,14 +193,11 @@ with tab2:
                         supabase.table("guests").update(
                             {"check_in_status": "Checked In"}
                         ).eq("name", row["name"]).execute()
-                        st.success(f"{row['name']} has been checked in!")
-                        time.sleep(1)
                         st.rerun()
+
                 else:
                     if col2.button("❌ Check Out", key=f"checkout_{index}"):
                         supabase.table("guests").update(
                             {"check_in_status": "Not Checked In"}
                         ).eq("name", row["name"]).execute()
-                        st.success(f"{row['name']} has been checked out!")
-                        time.sleep(1)
                         st.rerun()
