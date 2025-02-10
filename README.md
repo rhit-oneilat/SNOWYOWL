@@ -1,38 +1,60 @@
-## **Current State**
-This is a **party management and guest tracking system** designed to streamline check-in, attendance monitoring, and statistical analysis of fraternity events. It uses **SQLite** for persistent data storage and **Streamlit** for an interactive dashboard.
+### **Current State of Party Monitor App (Deployed on Streamlit Community Cloud)**  
+The **Party Monitor** system is a **multi-user guest management and check-in application** designed for fraternity events. It currently runs on **Streamlit Community Cloud**, using **SQLite** for persistent storage and a **2-second polling mechanism** for real-time updates.  
 
-1. **Guest List Management**: CSV files containing guest names (split into on-campus and off-campus) are loaded into an SQLite database. Each guest is associated with a brother (host) and additional attributes like class year, gender, and check-in status.
-2. **Check-In System**: A real-time interface allows guests to be checked in or out. Their status updates in the database when a button is clicked.
-3. **Dashboard & Analytics**: A separate tab displays real-time statistics and visualizations, including guest distribution by brother, gender ratio, class breakdown, and campus status.
-4. **Persistent Storage**: All data is stored in **SQLite**, ensuring that information is retained even after the app is restarted.
+#### **Core Features (Working)**
+1. **Guest List Management**:  
+   - Supports CSV uploads for guest lists.  
+   - Stores guests in an SQLite database with attributes like host, class year, gender, and check-in status.  
 
-- **Core functionality is working**: Guests can be checked in and out, and their statuses update correctly in the database.
+2. **Check-In System**:  
+   - Provides a real-time interface for checking guests in/out.  
+   - Features **fuzzy name search** and **filters** (check-in status, location).  
 
-## Planned Changes & Improvements
+3. **Dashboard & Analytics**:  
+   - Displays live statistics on guest distribution (by brother, gender ratio, class breakdown, campus status).  
 
-### MVP (Immediate Priorities for Deployment at Next Party)
+4. **Multi-User Support**:  
+   - The system is designed to handle **at least 3 simultaneous check-in staff** with **live updates**.  
+   - Uses a **polling mechanism** (refreshing every 2 seconds) for real-time sync across devices.  
 
-1. **Deploy to Streamlit Cloud** to provide a public URL for check-in staff.
-2. Fix search, issue with case right now (all caps search queries work, nothing else does)
-3. Improve check in page UI
-4. Ensure guest list updates function properly
-5. Fix gender ratio and off campus ratio in logic.py
+5. **Authentication**:  
+   - A **simple password-based login** restricts access.  
 
-### Global Improvements (Post-MVP Enhancements)
+6. **Memory Optimization**:  
+   - The app currently uses **~194 MB of memory**, which remains manageable within Streamlit’s 1 GB limit.  
 
-- **Redesign Guest Management**: Investigate alternative ways to list and manage guests directly within the system while maintaining CSV upload functionality as a fallback. Ideally, guest entry should be fully handled through the app rather than relying on external CSVs.
-- **Expand Database Operations**: Implement robust database operations to manage guests and brothers dynamically, allowing for listing, modifying, and deleting entries within the app.
-- **Migrate Brothers List to Database**: Store fraternity brother information directly in SQLite instead of a CSV file, enabling real-time updates and reducing reliance on manual file handling.
+---
 
-### Long-Term Goals (Scaling & SaaS Development)
 
-6. **Migrate to Supabase (PostgreSQL) as the backend** for better scalability and real-time updates.
-7. **Transition frontend from Streamlit to Next.js** for a more scalable, user-friendly web app.
-8. **Implement real-time multi-user functionality** using Supabase subscriptions instead of polling.
-9. **Redesign guest management** to allow direct in-app guest entry rather than relying on CSVs.
-10. **Enhance authentication with Google Sign-In or fraternity-specific logins.**
-11. **Explore Progressive Web App (PWA) or native mobile app development** for features like QR code check-ins.
-12. **Investigate monetization strategies**, including insurance partnerships and subscription models.
+### **Planned Improvements & Enhancements**
+
+#### **Immediate Fixes & Optimizations (Next Deployment)**
+
+- **Optimize Polling for Efficiency**: Implement **adaptive polling**, reducing frequency when fewer users are online to minimize redundant queries.
+- **Enhance SQLite Performance & Stability**:
+    - Move database storage to `/mount/` for persistent access.
+    - Use **streaming queries** to load only necessary data rather than keeping entire guest lists in memory.
+    - Implement **`st.cache_data(ttl=30)`** to reduce redundant database queries.
+    - Ensure proper write-locking mechanisms to support simultaneous updates without conflicts.
+- **Improve Search Functionality**: Fix current case-sensitivity issue (currently only works with all-caps queries).
+- **Refine Check-In Page UI**: Enhance usability for faster guest processing.
+- **Ensure Guest List Updates Work Seamlessly**: Resolve any CSV upload issues to maintain data integrity.
+- **Secure the Repository**:
+    - Remove sensitive logic from the public repo while maintaining necessary functionality.
+    - Apply a **restrictive license** to protect intellectual property.
+
+---
+
+#### **Mid-Term Improvements (Post-MVP Enhancements)**
+- **Migrate to Supabase (PostgreSQL)** for better scalability and **real-time updates without polling**.  
+- **Transition Frontend to Next.js** for a more user-friendly, scalable interface.  
+- **Move Brother Data to the Database** for dynamic updates rather than relying on CSVs.  
+- **Enhance Authentication** with Google Sign-In or fraternity-specific logins.  
+- **Investigate Progressive Web App (PWA) or Mobile App Support** for easier check-ins via QR codes.  
+ 
+
+---
+
 
 
 
