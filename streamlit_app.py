@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import time
 from supabase import create_client
 from logic import PartyMonitor
 from visualization import (
@@ -62,57 +61,6 @@ st.title("SNOWYOWL")
 
 # Auto-refresh every 10 seconds
 st_autorefresh(interval=10000, key="data_refresh")
-
-# File Uploaders in Sidebar
-st.sidebar.header("📂 Guest Lists")
-on_campus_file = st.sidebar.file_uploader("Upload On-Campus Guest List", type=["csv"])
-off_campus_file = st.sidebar.file_uploader("Upload Off-Campus Guest List", type=["csv"])
-
-if on_campus_file and off_campus_file:
-    # Read CSVs
-    on_campus_df = pd.read_csv(on_campus_file)
-    off_campus_df = pd.read_csv(off_campus_file)
-
-    # Process guests
-    on_melted = on_campus_df.melt(var_name="brother", value_name="name").dropna()
-    off_melted = off_campus_df.melt(var_name="brother", value_name="name").dropna()
-
-    on_melted["campus_status"] = "On Campus"
-    off_melted["campus_status"] = "Off Campus"
-
-    all_guests = pd.concat([on_melted, off_melted])
-
-    # Standardize guest names
-    all_guests["name"] = all_guests["name"].str.upper()
-
-    # Assign check-in status
-    all_guests["check_in_status"] = "Not Checked In"
-
-    # Convert to dictionary for Supabase upsert
-    guest_records = all_guests.to_dict(orient="records")
-
-    # Upsert into Supabase
-    supabase.table("guests").upsert(guest_records).execute()
-
-    # Get current guests in the database
-    existing_guest_data = load_initial_data()
-
-    # Find guests in the database but NOT in the new upload
-    to_delete = existing_guest_data[
-        ~existing_guest_data["name"].isin(all_guests["name"])
-    ]
-
-    # Bulk delete missing guests
-    if not to_delete.empty:
-        supabase.table("guests").delete().in_(
-            "name", to_delete["name"].tolist()
-        ).execute()
-
-    # Refresh the data
-    st.session_state.guest_data = load_initial_data()
-    st.success("Guest list updated successfully!")
-    time.sleep(1)
-    st.rerun()
 
 
 # Create tabs
