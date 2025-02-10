@@ -1,5 +1,6 @@
-### **Current State of SNOWYOWL**  
-The **SNOWYOWL** system is a **multi-user guest management and check-in application** designed for fraternity events. It currently runs on **Streamlit Community Cloud**, using **Supabase (PostgreSQL)** for persistent storage. Smooth check-in and check-out updates are now a priority, as the previous **2-second polling mechanism** caused inefficiencies.  
+### Current State of SNOWYOWL
+---
+The **SNOWYOWL system** is a **multi-user guest management and check-in application** designed for fraternity events. It currently runs on **Streamlit Community Cloud**, using **Supabase (PostgreSQL)** for persistent storage. Smooth check-in and check-out updates are now a priority, as the previous **2-second polling mechanism** caused inefficiencies.  
 ---
 #### **Core Features (Working)**  
 1. **Guest List Management**:  
