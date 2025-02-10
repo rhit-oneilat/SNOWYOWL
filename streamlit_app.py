@@ -100,23 +100,25 @@ if on_campus_file and off_campus_file:
     # Upsert into Supabase
     supabase.table("guests").upsert(guest_records).execute()
 
+    # Get current guests in the database
+    existing_guest_data = load_initial_data()
+
+    # Find guests in the database but NOT in the new upload
+    to_delete = existing_guest_data[
+        ~existing_guest_data["name"].isin(guests_with_brothers["name"])
+    ]
+
+    # Bulk delete missing guests
+    if not to_delete.empty:
+        supabase.table("guests").delete().in_(
+            "name", to_delete["name"].tolist()
+        ).execute()
+
     # Refresh the data
     st.session_state.guest_data = load_initial_data()
     st.success("Guest list updated successfully!")
     time.sleep(1)
     st.rerun()
-
-# Get current guests in the database
-existing_guest_data = load_initial_data()
-
-# Find guests in the database but NOT in the new upload
-to_delete = existing_guest_data[
-    ~existing_guest_data["name"].isin(guests_with_brothers["name"])
-]
-
-# Bulk delete missing guests
-if not to_delete.empty:
-    supabase.table("guests").delete().in_("name", to_delete["name"].tolist()).execute()
 
 
 # Create tabs
