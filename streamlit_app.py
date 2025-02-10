@@ -45,10 +45,26 @@ def check_auth():
 check_auth()
 
 
-# Fetch guest data from Supabase
+# Optimize Supabase queries with indexing and incremental updates
+@st.cache_data(ttl=5)
 def load_guest_data():
-    response = supabase.table("guests").select("*").execute()
+    response = (
+        supabase.table("guests")
+        .select("name, brother, check_in_status, campus_status")
+        .execute()
+    )
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
+
+# Incremental updates rather than full refresh
+def update_guest_status(name, status):
+    supabase.table("guests").update({"check_in_status": status}).eq(
+        "name", name
+    ).execute()
+    st.session_state.guest_data.loc[
+        st.session_state.guest_data["name"] == name, "check_in_status"
+    ] = status
+    st.rerun()
 
 
 # Initialize session state
@@ -63,7 +79,11 @@ st.title("SNOWYOWL")
 
 # Real-time listener for guest check-in/out updates
 def handle_update(payload):
-    st.session_state.guest_data = load_guest_data()
+    updated_name = payload["new"]["name"]
+    updated_status = payload["new"]["check_in_status"]
+    st.session_state.guest_data.loc[
+        st.session_state.guest_data["name"] == updated_name, "check_in_status"
+    ] = updated_status
     st.rerun()
 
 
@@ -141,13 +161,7 @@ with tab2:
             )
             if row["check_in_status"] == "Not Checked In":
                 if col2.button("✅ Check In", key=f"checkin_{index}"):
-                    supabase.table("guests").update(
-                        {"check_in_status": "Checked In"}
-                    ).eq("name", row["name"]).execute()
-                    st.success(f"{row['name']} has been checked in!")
+                    update_guest_status(row["name"], "Checked In")
             else:
                 if col2.button("❌ Check Out", key=f"checkout_{index}"):
-                    supabase.table("guests").update(
-                        {"check_in_status": "Not Checked In"}
-                    ).eq("name", row["name"]).execute()
-                    st.success(f"{row['name']} has been checked out!")
+                    update_guest_status(row["name"], "Not Checked In")
