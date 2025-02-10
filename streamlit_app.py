@@ -85,17 +85,11 @@ if on_campus_file and off_campus_file:
     # Standardize guest names
     all_guests["name"] = all_guests["name"].str.upper()
 
-    # Load fraternity brother data for class years
-    brothers_data = pd.read_csv("brothers.csv")
-
-    # Merge guest data with class years
-    guests_with_brothers = all_guests.merge(brothers_data, on="brother", how="left")
-
     # Assign check-in status
-    guests_with_brothers["check_in_status"] = "Not Checked In"
+    all_guests["check_in_status"] = "Not Checked In"
 
     # Convert to dictionary for Supabase upsert
-    guest_records = guests_with_brothers.to_dict(orient="records")
+    guest_records = all_guests.to_dict(orient="records")
 
     # Upsert into Supabase
     supabase.table("guests").upsert(guest_records).execute()
@@ -105,7 +99,7 @@ if on_campus_file and off_campus_file:
 
     # Find guests in the database but NOT in the new upload
     to_delete = existing_guest_data[
-        ~existing_guest_data["name"].isin(guests_with_brothers["name"])
+        ~existing_guest_data["name"].isin(all_guests["name"])
     ]
 
     # Bulk delete missing guests
