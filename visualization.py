@@ -48,7 +48,6 @@ def plot_class_distribution(df):
         title="Guests by Brother's Class",
         xaxis_title="Class Year",
         yaxis_title="Number of Guests",
-        dtick=1,
+        xaxis=dict(dtick=1),  # Added dtick for x-axis too if needed
     )
-
     return fig
