@@ -4,18 +4,16 @@ import plotly.graph_objects as go
 def plot_brother_guest_distribution(df):
     """Create bar chart showing number of guests per brother"""
     guest_counts = df.groupby("brother").size().sort_values(ascending=True)
-
     fig = go.Figure(
         go.Bar(x=guest_counts.values, y=guest_counts.index, orientation="h")
     )
-
     fig.update_layout(
         title="Guests per Brother",
         xaxis_title="Number of Guests",
         yaxis_title="Brother Name",
         height=max(400, len(guest_counts) * 25),
+        xaxis=dict(dtick=1),  # This sets integer tick marks
     )
-
     return fig
 
 
