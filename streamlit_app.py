@@ -1,7 +1,7 @@
 import streamlit as st
-import sqlite3
 import pandas as pd
 import time
+from supabase import create_client
 from logic import PartyMonitor
 from visualization import (
     plot_brother_guest_distribution,
@@ -9,12 +9,15 @@ from visualization import (
     plot_class_distribution,
     plot_campus_distribution,
 )
-from database import initialize_db
 from streamlit_autorefresh import st_autorefresh
 from rapidfuzz import process
 
-# print(f"Memory Usage: {psutil.Process().memory_info().rss / 1024**2:.2f} MB")
+# Supabase credentials
+SUPABASE_URL = st.secrets["supabase"]["url"]
+SUPABASE_KEY = st.secrets["supabase"]["key"]
 
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Hardcoded username and password
 USERNAME = "door"
@@ -44,17 +47,11 @@ def check_auth():
 
 check_auth()
 
-# Initialize the database
-initialize_db()
 
-# Load guest data
-
-
+# Fetch guest data from Supabase
 def load_guest_data():
-    conn = sqlite3.connect("party_monitor.db")
-    df = pd.read_sql("SELECT * FROM guests", conn)
-    conn.close()
-    return df
+    response = supabase.table("guests").select("*").execute()
+    return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
 # Initialize session state
@@ -129,7 +126,7 @@ with tab2:
             filtered_df = filtered_df[filtered_df["check_in_status"] == status_filter]
 
         if location_filter != "All":
-            filtered_df = filtered_df[filtered_df["location"] == location_filter]
+            filtered_df = filtered_df[filtered_df["campus_status"] == location_filter]
 
         # Display Table
         st.write("### Guest List")
@@ -140,13 +137,17 @@ with tab2:
             )
             if row["check_in_status"] == "Not Checked In":
                 if col2.button("✅ Check In", key=f"checkin_{index}"):
-                    st.session_state.monitor.check_in_guest(row["name"])
+                    supabase.table("guests").update(
+                        {"check_in_status": "Checked In"}
+                    ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked in!")
                     time.sleep(1)
                     st.rerun()
             else:
                 if col2.button("❌ Check Out", key=f"checkout_{index}"):
-                    st.session_state.monitor.check_out_guest(row["name"])
+                    supabase.table("guests").update(
+                        {"check_in_status": "Not Checked In"}
+                    ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked out!")
                     time.sleep(1)
                     st.rerun()
