@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import time
 from supabase import create_client
 from logic import PartyMonitor
 from visualization import (
@@ -9,13 +8,11 @@ from visualization import (
     plot_class_distribution,
     plot_campus_distribution,
 )
-from streamlit_autorefresh import st_autorefresh
 from rapidfuzz import process
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
 SUPABASE_KEY = st.secrets["supabase"]["key"]
-
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -58,12 +55,19 @@ def load_guest_data():
 if "monitor" not in st.session_state:
     st.session_state.monitor = PartyMonitor()
 
-st.session_state.guest_data = load_guest_data()
+if "guest_data" not in st.session_state:
+    st.session_state.guest_data = load_guest_data()
 
 st.title("SNOWYOWL")
 
-# Auto-refresh every 2 seconds
-st_autorefresh(interval=2000, key="data_refresh")
+
+# Real-time listener for guest check-in/out updates
+def handle_update(payload):
+    st.session_state.guest_data = load_guest_data()
+    st.rerun()
+
+
+supabase.table("guests").on("UPDATE", handle_update).subscribe()
 
 # File Uploaders in Sidebar
 st.sidebar.header("📂 Guest Lists")
@@ -141,13 +145,9 @@ with tab2:
                         {"check_in_status": "Checked In"}
                     ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked in!")
-                    time.sleep(1)
-                    st.rerun()
             else:
                 if col2.button("❌ Check Out", key=f"checkout_{index}"):
                     supabase.table("guests").update(
                         {"check_in_status": "Not Checked In"}
                     ).eq("name", row["name"]).execute()
                     st.success(f"{row['name']} has been checked out!")
-                    time.sleep(1)
-                    st.rerun()
