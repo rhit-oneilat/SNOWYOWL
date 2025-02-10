@@ -71,8 +71,8 @@ st.session_state.guest_data = load_guest_data()
 
 st.title("SNOWYOWL")
 
-# Auto-refresh every 2 seconds
-st_autorefresh(interval=2000, key="data_refresh")
+# Auto-refresh every 10 seconds
+st_autorefresh(interval=10000, key="data_refresh")
 
 # File Uploaders in Sidebar
 st.sidebar.header("📂 Guest Lists")
