@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
-from supabase import create_client
+from supabase_pop import create_client
 from logic import PartyMonitor
 from visualization import (
     plot_brother_guest_distribution,
