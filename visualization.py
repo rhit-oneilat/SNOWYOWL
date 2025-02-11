@@ -42,12 +42,17 @@ def plot_campus_distribution(df):
 
 
 def plot_class_distribution(df):
-    class_counts = df.groupby("year").size()
-    fig = go.Figure(go.Bar(x=class_counts.index, y=class_counts.values))
+    """Create bar chart showing number of guests per brother's class."""
+    if "year" not in df.columns or df["year"].isna().all():
+        return go.Figure().update_layout(title="No class year data available")
+
+    class_counts = df["year"].value_counts().sort_index()
+
+    fig = go.Figure(go.Bar(x=class_counts.index.astype(str), y=class_counts.values))
     fig.update_layout(
         title="Guests by Brother's Class",
         xaxis_title="Class Year",
         yaxis_title="Number of Guests",
-        xaxis=dict(dtick=1),  # Added dtick for x-axis too if needed
+        xaxis=dict(dtick=1),
     )
     return fig

@@ -51,7 +51,12 @@ if "monitor" not in st.session_state:
 
 # Modified to load initial data without filters
 def load_initial_data():
-    response = supabase.table("guests").select("*").execute()
+    query = (
+        supabase.table("guests")
+        .select("brother, gender, campus_status, check_in_status, brothers(year)")
+        .join("brothers", "brother", "name")  # Join guests.brother with brothers.name
+    )
+    response = query.execute()
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
