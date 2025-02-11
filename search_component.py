@@ -12,30 +12,43 @@ class SearchState:
     brother_filter: str = "all"
 
 
-@st.cache_data(ttl=300)  # Cache data for 5 minutes
+@st.cache_data(ttl=300)
 def _fetch_guest_data(_supabase):
-    """Fetch all guest data with caching"""
+    """Fetch guest data and store in cache."""
     try:
         response = _supabase.table("guests").select("*, brothers!inner(*)").execute()
-        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+        if not response.data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(response.data)
+
+        # Precompute lowercase names for faster searching
+        df["name_lower"] = df["name"].str.lower()
+        df["brother_name_lower"] = df["brothers"].apply(
+            lambda x: x["name"].lower() if x else ""
+        )
+
+        return df
     except Exception as e:
         st.error(f"Error fetching guest data: {str(e)}")
         return pd.DataFrame()
 
 
 def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
-    """Load and filter guest data"""
-    df = _fetch_guest_data(supabase)
+    """Apply search and filtering to guest data."""
+    if "guest_data" not in st.session_state:
+        st.session_state.guest_data = _fetch_guest_data(supabase)
+
+    df = st.session_state.guest_data.copy()
     if df.empty:
         return df
 
     if search_state.query:
         query_lower = search_state.query.lower()
-        name_match = df["name"].str.lower().str.contains(query_lower, na=False)
-        brother_match = df["brothers"].apply(
-            lambda x: query_lower in x["name"].lower() if x else False
-        )
-        df = df[name_match | brother_match]
+        df = df[
+            df["name_lower"].str.contains(query_lower, na=False)
+            | df["brother_name_lower"].str.contains(query_lower, na=False)
+        ]
 
     if search_state.status_filter != "all":
         status_map = {"checked-in": "Checked In", "not-checked-in": "Not Checked In"}
@@ -45,16 +58,11 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
         location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
         df = df[df["campus_status"] == location_map[search_state.location_filter]]
 
-    if search_state.brother_filter != "all":
-        df = df[
-            df["brothers"].apply(lambda x: x["name"] == search_state.brother_filter)
-        ]
-
     return df
 
 
-def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bool:
-    """Handle updating a guest's status in the database"""
+def handle_guest_status_update(supabase, guest_name: str, new_status: str):
+    """Update guest check-in status."""
     try:
         update_data = {
             "check_in_status": new_status,
@@ -68,67 +76,64 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bo
             .eq("name", guest_name)
             .execute()
         )
-        return bool(response.data)
+
+        if response.data:
+            # Update local data instead of refetching everything
+            guest_index = st.session_state.guest_data[
+                st.session_state.guest_data["name"] == guest_name
+            ].index
+            if not guest_index.empty:
+                st.session_state.guest_data.at[guest_index[0], "check_in_status"] = (
+                    new_status
+                )
+                st.session_state.guest_data.at[guest_index[0], "check_in_time"] = (
+                    update_data["check_in_time"]
+                )
+
+            return True
+        return False
     except Exception as e:
         st.error(f"Error updating guest status: {str(e)}")
         return False
 
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
-    """Creates a guest list component with improved status updates and confirmation"""
+    """Guest list with better status updates."""
     if filtered_df.empty:
-        st.info("No guests found matching your search criteria.")
+        st.info("No guests found.")
         return
 
-    with st.container():
-        for index, row in filtered_df.iterrows():
-            with st.container():
-                col1, col2 = st.columns([4, 1])
+    for index, row in filtered_df.iterrows():
+        with st.container():
+            col1, col2 = st.columns([4, 1])
 
-                with col1:
-                    st.markdown(f"### {row['name']}")
-                    st.markdown(
-                        f"**Brother:** {row['brothers']['name']}  \n"
-                        f"**Status:** {row['check_in_status']}  \n"
-                        f"**Location:** {row['campus_status']}"
-                    )
-                    if row.get("check_in_time"):
-                        st.caption(
-                            f"Last check-in: {pd.to_datetime(row['check_in_time']).strftime('%Y-%m-%d %H:%M:%S')}"
-                        )
-
-                is_checked_in = row["check_in_status"] == "Checked In"
-                button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
-                new_status = "Not Checked In" if is_checked_in else "Checked In"
-
-                if col2.button(
-                    button_text,
-                    key=f"button_{row['name']}_{index}",
-                    use_container_width=True,
-                ):
-                    confirm_key = f"confirm_{row['name']}_{index}"
-                    st.session_state[confirm_key] = not st.session_state.get(
-                        confirm_key, False
+            with col1:
+                st.markdown(f"### {row['name']}")
+                st.markdown(
+                    f"**Brother:** {row['brothers']['name']}  \n"
+                    f"**Status:** {row['check_in_status']}  \n"
+                    f"**Location:** {row['campus_status']}"
+                )
+                if row.get("check_in_time"):
+                    st.caption(
+                        f"Last check-in: {pd.to_datetime(row['check_in_time']).strftime('%Y-%m-%d %H:%M:%S')}"
                     )
 
-                if st.session_state.get(f"confirm_{row['name']}_{index}", False):
-                    if st.checkbox(
-                        f"Confirm {new_status.lower()} {row['name']}",
-                        key=f"confirm_box_{row['name']}_{index}",
-                    ):
-                        if handle_guest_status_update(
-                            supabase, row["name"], new_status
-                        ):
-                            st.toast(
-                                f"Successfully updated {row['name']} to {new_status}",
-                                icon="✅",
-                            )
-                            st.rerun()
-                st.divider()
+            is_checked_in = row["check_in_status"] == "Checked In"
+            button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
+            new_status = "Not Checked In" if is_checked_in else "Checked In"
+
+            if col2.button(
+                button_text,
+                key=f"button_{row['name']}_{index}",
+                use_container_width=True,
+            ):
+                if handle_guest_status_update(supabase, row["name"], new_status):
+                    st.toast(f"{row['name']} is now {new_status}.", icon="✅")
 
 
 def create_search_component() -> SearchState:
-    """Create the enhanced search interface component"""
+    """Enhanced search interface with better performance."""
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
@@ -136,10 +141,9 @@ def create_search_component() -> SearchState:
         col1, col2 = st.columns([3, 1])
         with col1:
             search_query = st.text_input(
-                "🔍",
+                "🔍 Search",
                 value=st.session_state.search_state.query,
                 placeholder="Search guests or brothers...",
-                label_visibility="collapsed",
             )
 
         with st.expander("Filters", expanded=False):
@@ -157,11 +161,10 @@ def create_search_component() -> SearchState:
                     st.session_state.search_state.location_filter
                 ),
             )
-            brother_filter = "all"
 
+        # Clear Filters Button
         if search_query or status_filter != "all" or location_filter != "all":
             if st.button("Clear Filters"):
-                search_query, status_filter, location_filter = "", "all", "all"
                 st.session_state.search_state = SearchState()
                 st.rerun()
 
@@ -169,8 +172,8 @@ def create_search_component() -> SearchState:
             query=search_query,
             status_filter=status_filter,
             location_filter=location_filter,
-            brother_filter=brother_filter,
         )
+
         active_filters = [
             f"Status: {status_filter}" if status_filter != "all" else "",
             f"Location: {location_filter}" if location_filter != "all" else "",
