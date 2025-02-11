@@ -11,7 +11,7 @@ def plot_brother_guest_distribution(df):
     df (pandas.DataFrame): DataFrame containing 'brother' column
 
     Returns:
-    dict: Plotly figure dictionary
+    plotly.graph_objects.Figure: Plotly figure object
     """
     # Calculate guest counts and sort
     guest_counts = df.groupby("brother").size().sort_values(ascending=False)
@@ -31,29 +31,28 @@ def plot_brother_guest_distribution(df):
     # Filter data based on selection
     displayed_counts = guest_counts.head(n_brothers)
 
-    # Create horizontal bar chart
-    fig = {
-        "data": [
-            {
-                "type": "bar",
-                "x": displayed_counts.values.tolist(),
-                "y": displayed_counts.index.tolist(),
-                "orientation": "h",
-                "marker": {"color": "rgb(79, 70, 229)"},  # Indigo color for consistency
-            }
-        ],
-        "layout": {
-            "title": f"Guests per Brother ({selected_display})",
-            "xaxis": {"title": "Number of Guests"},
-            "yaxis": {"title": "Brother Name", "categoryorder": "total ascending"},
-            "height": max(
-                400, len(displayed_counts) * 25
-            ),  # Dynamic height based on number of bars
-            "showlegend": False,
-        },
-    }
+    # Create horizontal bar chart using graph_objects
+    fig = go.Figure(
+        go.Bar(
+            x=displayed_counts.values.tolist(),
+            y=displayed_counts.index.tolist(),
+            orientation="h",
+            marker_color="rgb(79, 70, 229)",  # Indigo color for consistency
+        )
+    )
 
-    # Return the figure instead of displaying it
+    # Update layout
+    fig.update_layout(
+        title=f"Guests per Brother ({selected_display})",
+        xaxis_title="Number of Guests",
+        yaxis_title="Brother Name",
+        yaxis={"categoryorder": "total ascending"},
+        height=max(
+            400, len(displayed_counts) * 25
+        ),  # Dynamic height based on number of bars
+        showlegend=False,
+    )
+
     return fig
 
 
