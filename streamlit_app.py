@@ -51,12 +51,13 @@ if "monitor" not in st.session_state:
 
 # Modified to load initial data without filters
 def load_initial_data():
-    query = (
+    response = (
         supabase.table("guests")
-        .select("brother, gender, campus_status, check_in_status, brothers(year)")
-        .join("brothers", "brother", "name")  # Join guests.brother with brothers.name
+        .select(
+            "brother, gender, campus_status, check_in_status, brothers(year)"
+        )  # Fetch year from brothers
+        .execute()
     )
-    response = query.execute()
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
 
 
@@ -102,7 +103,11 @@ with tab2:
 
         # Load filtered data
         def load_filtered_data(search_state: SearchState):
-            query = supabase.table("guests").select("*")
+            query = (
+                supabase.table("guests").select(
+                    "name, brother, gender, campus_status, check_in_status, brothers(year)"
+                )  # Fetch year
+            )
 
             if search_state.query:
                 query = query.text_search("name_tsv", search_state.query)
