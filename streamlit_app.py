@@ -114,6 +114,7 @@ with tab1:
             )
 
 # ---------------- Guest List & Check-In Tab ----------------
+# ---------------- Guest List & Check-In Tab ----------------
 with tab2:
     if st.session_state.guest_data.empty:
         st.info("No guest data available.")
