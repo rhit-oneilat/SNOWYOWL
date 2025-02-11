@@ -43,6 +43,9 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
     if df.empty:
         return df
 
+    # Split and lowercase the name
+    df["name_lower"] = df["name"].apply(lambda x: " ".join(x.split()).lower())
+
     if search_state.query:
         query_lower = search_state.query.lower()
         df = df[
