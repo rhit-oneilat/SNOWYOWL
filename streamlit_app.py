@@ -9,7 +9,11 @@ from visualization import (
     plot_campus_distribution,
 )
 from streamlit_autorefresh import st_autorefresh  # type: ignore
-from search_component import create_guest_list_component
+from search_component import (
+    create_guest_list_component,
+    create_search_component,
+    load_filtered_data,
+)
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -98,4 +102,6 @@ with tab2:
         st.info("No guest data available.")
     else:
         st.subheader("Guest List & Check-In")
-        create_guest_list_component(supabase)
+        search_state = create_search_component()
+        filtered_df = load_filtered_data(supabase, search_state)
+        create_guest_list_component(supabase, filtered_df)
