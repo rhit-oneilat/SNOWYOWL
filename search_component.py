@@ -36,7 +36,7 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
         query_lower = search_state.query.lower()
         name_match = df["name"].str.lower().str.contains(query_lower, na=False)
         brother_match = df["brothers"].apply(
-            lambda x: x["name"].lower().contains(query_lower) if x else False
+            lambda x: query_lower in x["name"].lower() if x else False
         )
         df = df[name_match | brother_match]
 
