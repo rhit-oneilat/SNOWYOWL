@@ -1,22 +1,54 @@
 import plotly.graph_objects as go
+import streamlit as st
 
 
 def plot_brother_guest_distribution(df):
-    """Create bar chart showing number of guests per brother"""
-    guest_counts = df.groupby("brother").size().sort_values(ascending=True)
+    """
+    Create an interactive bar chart showing number of guests per brother with
+    options to display different numbers of brothers.
 
-    fig = go.Figure(
-        go.Bar(x=guest_counts.values, y=guest_counts.index, orientation="h")
+    Parameters:
+    df (pandas.DataFrame): DataFrame containing 'brother' column
+    """
+    # Calculate guest counts and sort
+    guest_counts = df.groupby("brother").size().sort_values(ascending=False)
+
+    # Create selection box for number of brothers to display
+    display_options = {"Top 5": 5, "Top 10": 10, "Top 15": 15, "All": len(guest_counts)}
+
+    selected_display = st.selectbox(
+        "Select number of brothers to display:",
+        options=list(display_options.keys()),
+        index=0,  # Default to first option
     )
 
+    # Get number of brothers to display
+    n_brothers = display_options[selected_display]
+
+    # Filter data based on selection
+    displayed_counts = guest_counts.head(n_brothers)
+
+    # Create horizontal bar chart
+    fig = go.Figure(
+        go.Bar(
+            x=displayed_counts.values,
+            y=displayed_counts.index,
+            orientation="h",
+            marker_color="rgb(79, 70, 229)",  # Indigo color for consistency
+        )
+    )
+
+    # Update layout
     fig.update_layout(
-        title="Guests per Brother",
+        title=f"Guests per Brother ({selected_display})",
         xaxis_title="Number of Guests",
         yaxis_title="Brother Name",
-        height=max(400, len(guest_counts) * 25),
+        height=max(
+            400, len(displayed_counts) * 25
+        ),  # Dynamic height based on number of bars
+        yaxis={"categoryorder": "total ascending"},  # Sort bars by value
+        showlegend=False,
     )
-
-    return fig
 
 
 def plot_gender_ratio(df):
