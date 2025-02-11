@@ -84,17 +84,34 @@ with tab1:
     else:
         processed_df = st.session_state.guest_data
         stats = st.session_state.monitor.get_real_time_stats(processed_df)
+
+        # Display metrics at the top
         metric_cols = st.columns(len(stats))
         for col, (key, value) in zip(metric_cols, stats.items()):
             col.metric(key, value)
-        st.plotly_chart(
-            plot_brother_guest_distribution(processed_df), use_container_width=True
-        )
-        st.plotly_chart(plot_gender_ratio(processed_df), use_container_width=True)
-        st.plotly_chart(plot_class_distribution(processed_df), use_container_width=True)
-        st.plotly_chart(
-            plot_campus_distribution(processed_df), use_container_width=True
-        )
+
+        # Create two rows with two columns each for the plots
+        row1_col1, row1_col2 = st.columns(2)
+        row2_col1, row2_col2 = st.columns(2)
+
+        # Place plots in the grid
+        with row1_col1:
+            st.plotly_chart(
+                plot_brother_guest_distribution(processed_df), use_container_width=True
+            )
+
+        with row1_col2:
+            st.plotly_chart(plot_gender_ratio(processed_df), use_container_width=True)
+
+        with row2_col1:
+            st.plotly_chart(
+                plot_class_distribution(processed_df), use_container_width=True
+            )
+
+        with row2_col2:
+            st.plotly_chart(
+                plot_campus_distribution(processed_df), use_container_width=True
+            )
 
 # ---------------- Guest List & Check-In Tab ----------------
 with tab2:
