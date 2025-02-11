@@ -43,10 +43,17 @@ def plot_campus_distribution(df):
 
 def plot_class_distribution(df):
     """Create bar chart showing number of guests per brother's class."""
-    if "year" not in df.columns or df["year"].isna().all():
+    # Extract year from the brothers nested data
+    if "brothers" in df.columns:
+        # Extract year from the brothers dictionary
+        years = df["brothers"].apply(lambda x: x.get("year") if x else None)
+    else:
+        years = df.get("year")
+
+    if years is None or years.isna().all():
         return go.Figure().update_layout(title="No class year data available")
 
-    class_counts = df["year"].value_counts().sort_index()
+    class_counts = years.value_counts().sort_index()
 
     fig = go.Figure(go.Bar(x=class_counts.index.astype(str), y=class_counts.values))
     fig.update_layout(
