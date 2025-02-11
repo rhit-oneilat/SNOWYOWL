@@ -13,45 +13,47 @@ class SearchState:
 
 
 @st.cache_data(ttl=300)  # Cache data for 5 minutes
-def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
-    """Load and filter guest data with caching"""
+def _fetch_guest_data(_supabase):
+    """Fetch all guest data with caching"""
     try:
-        # Fetch all data with brother information
-        response = supabase.table("guests").select("*, brothers!inner(*)").execute()
-        df = pd.DataFrame(response.data) if response.data else pd.DataFrame()
-
-        if df.empty:
-            return df
-
-        # Apply filters
-        if search_state.query:
-            query_lower = search_state.query.lower()
-            name_match = df["name"].str.lower().str.contains(query_lower, na=False)
-            brother_match = df["brothers"].apply(
-                lambda x: x["name"].lower().contains(query_lower) if x else False
-            )
-            df = df[name_match | brother_match]
-
-        if search_state.status_filter != "all":
-            status_map = {
-                "checked-in": "Checked In",
-                "not-checked-in": "Not Checked In",
-            }
-            df = df[df["check_in_status"] == status_map[search_state.status_filter]]
-
-        if search_state.location_filter != "all":
-            location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
-            df = df[df["campus_status"] == location_map[search_state.location_filter]]
-
-        if search_state.brother_filter != "all":
-            df = df[
-                df["brothers"].apply(lambda x: x["name"] == search_state.brother_filter)
-            ]
-
-        return df
+        response = _supabase.table("guests").select("*, brothers!inner(*)").execute()
+        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
     except Exception as e:
         st.error(f"Error fetching guest data: {str(e)}")
         return pd.DataFrame()
+
+
+def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
+    """Load and filter guest data"""
+    # Fetch data using cached function
+    df = _fetch_guest_data(supabase)
+
+    if df.empty:
+        return df
+
+    # Apply filters
+    if search_state.query:
+        query_lower = search_state.query.lower()
+        name_match = df["name"].str.lower().str.contains(query_lower, na=False)
+        brother_match = df["brothers"].apply(
+            lambda x: x["name"].lower().contains(query_lower) if x else False
+        )
+        df = df[name_match | brother_match]
+
+    if search_state.status_filter != "all":
+        status_map = {"checked-in": "Checked In", "not-checked-in": "Not Checked In"}
+        df = df[df["check_in_status"] == status_map[search_state.status_filter]]
+
+    if search_state.location_filter != "all":
+        location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
+        df = df[df["campus_status"] == location_map[search_state.location_filter]]
+
+    if search_state.brother_filter != "all":
+        df = df[
+            df["brothers"].apply(lambda x: x["name"] == search_state.brother_filter)
+        ]
+
+    return df
 
 
 def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bool:

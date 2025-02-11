@@ -112,8 +112,6 @@ with tab1:
             st.plotly_chart(
                 plot_campus_distribution(processed_df), use_container_width=True
             )
-
-# ---------------- Guest List & Check-In Tab ----------------
 # ---------------- Guest List & Check-In Tab ----------------
 with tab2:
     if st.session_state.guest_data.empty:
