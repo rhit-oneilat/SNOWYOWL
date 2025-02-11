@@ -9,6 +9,9 @@ def plot_brother_guest_distribution(df):
 
     Parameters:
     df (pandas.DataFrame): DataFrame containing 'brother' column
+
+    Returns:
+    dict: Plotly figure dictionary
     """
     # Calculate guest counts and sort
     guest_counts = df.groupby("brother").size().sort_values(ascending=False)
@@ -50,8 +53,8 @@ def plot_brother_guest_distribution(df):
         },
     }
 
-    # Display the plot in Streamlit
-    st.plotly_chart(fig, use_container_width=True)
+    # Return the figure instead of displaying it
+    return fig
 
 
 def plot_gender_ratio(df):
