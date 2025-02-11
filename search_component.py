@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
@@ -8,14 +9,74 @@ class SearchState:
     query: str = ""
     status_filter: str = "all"
     location_filter: str = "all"
+    brother_filter: str = "all"
+
+
+@st.cache_data(ttl=300)  # Cache data for 5 minutes
+def fetch_all_guests_data(supabase):
+    """Fetch all guest data with brother information"""
+    try:
+        response = supabase.table("guests").select("*, brothers!inner(*)").execute()
+        return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+    except Exception as e:
+        st.error(f"Error fetching guest data: {str(e)}")
+        return pd.DataFrame()
+
+
+def filter_guests_frontend(df: pd.DataFrame, search_state: SearchState) -> pd.DataFrame:
+    """Filter guests data in the frontend based on search criteria"""
+    if df.empty:
+        return df
+
+    filtered_df = df.copy()
+
+    # Text search across guest name and brother name
+    if search_state.query:
+        query_lower = search_state.query.lower()
+        name_match = filtered_df["name"].str.lower().str.contains(query_lower, na=False)
+        brother_match = filtered_df["brothers"].apply(
+            lambda x: x["name"].lower().contains(query_lower) if x else False
+        )
+        filtered_df = filtered_df[name_match | brother_match]
+
+    # Status filter
+    if search_state.status_filter != "all":
+        status_map = {"checked-in": "Checked In", "not-checked-in": "Not Checked In"}
+        filtered_df = filtered_df[
+            filtered_df["check_in_status"] == status_map[search_state.status_filter]
+        ]
+
+    # Location filter
+    if search_state.location_filter != "all":
+        location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
+        filtered_df = filtered_df[
+            filtered_df["campus_status"] == location_map[search_state.location_filter]
+        ]
+
+    # Brother filter
+    if search_state.brother_filter != "all":
+        filtered_df = filtered_df[
+            filtered_df["brothers"].apply(
+                lambda x: x["name"] == search_state.brother_filter
+            )
+        ]
+
+    return filtered_df
 
 
 def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bool:
     """Handle updating a guest's status in the database"""
     try:
+        update_data = {
+            "check_in_status": new_status,
+            "check_in_time": datetime.now().isoformat()
+            if new_status == "Checked In"
+            else None,
+        }
+
         response = (
             supabase.table("guests")
-            .update({"check_in_status": new_status})
+            .update(update_data)
             .eq("name", guest_name)
             .execute()
         )
@@ -26,59 +87,63 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bo
 
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
-    """Creates a guest list component with improved button handling"""
+    """Creates a guest list component with improved status updates and confirmation"""
     if filtered_df.empty:
         st.info("No guests found matching your search criteria.")
         return
 
-    # Use a container for better organization
     with st.container():
         for index, row in filtered_df.iterrows():
-            col1, col2 = st.columns([4, 1])
+            with st.container():
+                col1, col2 = st.columns([4, 1])
 
-            # Display guest information
-            col1.write(
-                f"**{row['name']}** (Brother: {row['brothers']['name']}, Status: {row['check_in_status']})"
-            )
-
-            is_checked_in = row["check_in_status"] == "Checked In"
-            button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
-            new_status = "Not Checked In" if is_checked_in else "Checked In"
-
-            # Simplified button handling without session state
-            if col2.button(
-                button_text,
-                key=f"button_{row['name']}_{index}",
-                use_container_width=True,
-            ):
-                if handle_guest_status_update(supabase, row["name"], new_status):
-                    st.toast(
-                        f"Successfully {'checked out' if is_checked_in else 'checked in'} {row['name']}"
+                # Guest information with improved formatting
+                with col1:
+                    st.markdown(f"### {row['name']}")
+                    st.markdown(
+                        f"**Brother:** {row['brothers']['name']}  \n"
+                        f"**Status:** {row['check_in_status']}  \n"
+                        f"**Location:** {row['campus_status']}"
                     )
-                    st.rerun()
+                    if row.get("check_in_time"):
+                        st.caption(
+                            f"Last check-in: {pd.to_datetime(row['check_in_time']).strftime('%Y-%m-%d %H:%M:%S')}"
+                        )
+
+                # Status update button with confirmation
+                is_checked_in = row["check_in_status"] == "Checked In"
+                button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
+                new_status = "Not Checked In" if is_checked_in else "Checked In"
+
+                if col2.button(
+                    button_text,
+                    key=f"button_{row['name']}_{index}",
+                    use_container_width=True,
+                ):
+                    action = "check out" if is_checked_in else "check in"
+                    if st.modal(f"Confirm {action}").checkbox(
+                        f"Are you sure you want to {action} {row['name']}?"
+                    ):
+                        if handle_guest_status_update(
+                            supabase, row["name"], new_status
+                        ):
+                            st.toast(
+                                f"Successfully {action}ed {row['name']}", icon="✅"
+                            )
+                            st.rerun()
+                st.divider()
 
 
-def load_filtered_data(supabase, search_state: SearchState):
-    """Load filtered guest data from the database"""
-    query = supabase.table("guests").select("*, brothers!inner(*)")
+def create_search_component(supabase):
+    """Create the enhanced search interface component"""
+    # Load all data once and cache it
+    all_guests_df = fetch_all_guests_data(supabase)
 
-    if search_state.query:
-        query = query.text_search("name_tsv", search_state.query)
+    # Get unique brother names for filter
+    brother_options = ["all"] + sorted(
+        list(set(b["name"] for b in all_guests_df["brothers"].tolist()))
+    )
 
-    if search_state.status_filter != "all":
-        status_map = {"checked-in": "Checked In", "not-checked-in": "Not Checked In"}
-        query = query.eq("check_in_status", status_map[search_state.status_filter])
-
-    if search_state.location_filter != "all":
-        location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
-        query = query.eq("campus_status", location_map[search_state.location_filter])
-
-    response = query.execute()
-    return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-
-
-def create_search_component():
-    """Create the search interface component"""
     search_container = st.container()
 
     if "search_state" not in st.session_state:
@@ -90,7 +155,7 @@ def create_search_component():
             search_query = st.text_input(
                 "🔍",
                 value=st.session_state.search_state.query,
-                placeholder="Search guests...",
+                placeholder="Search guests or brothers...",
                 label_visibility="collapsed",
             )
 
@@ -107,6 +172,7 @@ def create_search_component():
                     st.session_state.search_state.status_filter
                 ),
             )
+
             location_filter = st.selectbox(
                 "Location",
                 options=["all", "on-campus", "off-campus"],
@@ -120,11 +186,26 @@ def create_search_component():
                 ),
             )
 
-        if search_query or status_filter != "all" or location_filter != "all":
+            brother_filter = st.selectbox(
+                "Listed By Brother",
+                options=brother_options,
+                format_func=lambda x: "All Brothers" if x == "all" else x,
+                index=brother_options.index(
+                    st.session_state.search_state.brother_filter
+                ),
+            )
+
+        if (
+            search_query
+            or status_filter != "all"
+            or location_filter != "all"
+            or brother_filter != "all"
+        ):
             if st.button("Clear Filters"):
                 search_query = ""
                 status_filter = "all"
                 location_filter = "all"
+                brother_filter = "all"
                 st.session_state.search_state = SearchState()
                 st.rerun()
 
@@ -132,14 +213,20 @@ def create_search_component():
             query=search_query,
             status_filter=status_filter,
             location_filter=location_filter,
+            brother_filter=brother_filter,
         )
 
-        if status_filter != "all" or location_filter != "all":
-            active_filters = []
-            if status_filter != "all":
-                active_filters.append(f"Status: {status_filter}")
-            if location_filter != "all":
-                active_filters.append(f"Location: {location_filter}")
+        # Show active filters
+        active_filters = []
+        if status_filter != "all":
+            active_filters.append(f"Status: {status_filter}")
+        if location_filter != "all":
+            active_filters.append(f"Location: {location_filter}")
+        if brother_filter != "all":
+            active_filters.append(f"Brother: {brother_filter}")
+        if active_filters:
             st.caption(f"Active filters: {', '.join(active_filters)}")
 
-    return st.session_state.search_state
+    # Filter data in the frontend
+    filtered_df = filter_guests_frontend(all_guests_df, st.session_state.search_state)
+    return filtered_df
