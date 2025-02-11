@@ -29,26 +29,29 @@ def plot_brother_guest_distribution(df):
     displayed_counts = guest_counts.head(n_brothers)
 
     # Create horizontal bar chart
-    fig = go.Figure(
-        go.Bar(
-            x=displayed_counts.values,
-            y=displayed_counts.index,
-            orientation="h",
-            marker_color="rgb(79, 70, 229)",  # Indigo color for consistency
-        )
-    )
+    fig = {
+        "data": [
+            {
+                "type": "bar",
+                "x": displayed_counts.values.tolist(),
+                "y": displayed_counts.index.tolist(),
+                "orientation": "h",
+                "marker": {"color": "rgb(79, 70, 229)"},  # Indigo color for consistency
+            }
+        ],
+        "layout": {
+            "title": f"Guests per Brother ({selected_display})",
+            "xaxis": {"title": "Number of Guests"},
+            "yaxis": {"title": "Brother Name", "categoryorder": "total ascending"},
+            "height": max(
+                400, len(displayed_counts) * 25
+            ),  # Dynamic height based on number of bars
+            "showlegend": False,
+        },
+    }
 
-    # Update layout
-    fig.update_layout(
-        title=f"Guests per Brother ({selected_display})",
-        xaxis_title="Number of Guests",
-        yaxis_title="Brother Name",
-        height=max(
-            400, len(displayed_counts) * 25
-        ),  # Dynamic height based on number of bars
-        yaxis={"categoryorder": "total ascending"},  # Sort bars by value
-        showlegend=False,
-    )
+    # Display the plot in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def plot_gender_ratio(df):
