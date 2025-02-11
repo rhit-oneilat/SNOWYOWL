@@ -9,7 +9,7 @@ from visualization import (
     plot_campus_distribution,
 )
 from streamlit_autorefresh import st_autorefresh  # type: ignore
-from search_component import SearchState, create_search_component
+from search_component import create_guest_list_component
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -98,59 +98,4 @@ with tab2:
         st.info("No guest data available.")
     else:
         st.subheader("Guest List & Check-In")
-
-        # Use the new search component
-        search_state = create_search_component()
-
-        # Load filtered data
-        def load_filtered_data(search_state: SearchState):
-            query = supabase.table("guests").select(
-                "*, brothers!inner(*)"
-            )  # Use inner join
-
-            if search_state.query:
-                query = query.text_search("name_tsv", search_state.query)
-
-            if search_state.status_filter != "all":
-                status_map = {
-                    "checked-in": "Checked In",
-                    "not-checked-in": "Not Checked In",
-                }
-                query = query.eq(
-                    "check_in_status", status_map[search_state.status_filter]
-                )
-
-            if search_state.location_filter != "all":
-                location_map = {"on-campus": "On Campus", "off-campus": "Off Campus"}
-                query = query.eq(
-                    "campus_status", location_map[search_state.location_filter]
-                )
-
-            response = query.execute()
-            return pd.DataFrame(response.data) if response.data else pd.DataFrame()
-
-        filtered_df = load_filtered_data(search_state)
-
-        # Display Table
-        st.write("### Guest List")
-        if filtered_df.empty:
-            st.info("No guests found matching your search criteria.")
-        else:
-            for index, row in filtered_df.iterrows():
-                col1, col2 = st.columns([4, 1])
-                col1.write(
-                    f"**{row['name']}** (Brother: {row['brother']}, Status: {row['check_in_status']})"
-                )
-                if row["check_in_status"] == "Not Checked In":
-                    if col2.button("✅ Check In", key=f"checkin_{index}"):
-                        supabase.table("guests").update(
-                            {"check_in_status": "Checked In"}
-                        ).eq("name", row["name"]).execute()
-                        st.rerun()
-
-                else:
-                    if col2.button("❌ Check Out", key=f"checkout_{index}"):
-                        supabase.table("guests").update(
-                            {"check_in_status": "Not Checked In"}
-                        ).eq("name", row["name"]).execute()
-                        st.rerun()
+        create_guest_list_component(supabase)

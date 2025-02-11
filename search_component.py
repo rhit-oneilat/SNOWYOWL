@@ -1,8 +1,6 @@
-# search_component.py
 import streamlit as st
-from dataclasses import dataclass
-import supabase
 import pandas as pd
+from dataclasses import dataclass
 
 
 @dataclass
@@ -13,16 +11,12 @@ class SearchState:
 
 
 def create_search_component():
-    # Create container for search component
     search_container = st.container()
 
-    # Initialize session state for search
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
-    # Create columns for search and filters
     with search_container:
-        # Search input with icon
         col1, col2 = st.columns([3, 1])
         with col1:
             search_query = st.text_input(
@@ -32,7 +26,6 @@ def create_search_component():
                 label_visibility="collapsed",
             )
 
-        # Expander for filters
         with st.expander("Filters", expanded=False):
             status_filter = st.selectbox(
                 "Status",
@@ -46,7 +39,6 @@ def create_search_component():
                     st.session_state.search_state.status_filter
                 ),
             )
-
             location_filter = st.selectbox(
                 "Location",
                 options=["all", "on-campus", "off-campus"],
@@ -60,7 +52,6 @@ def create_search_component():
                 ),
             )
 
-        # Clear filters button
         if search_query or status_filter != "all" or location_filter != "all":
             if st.button("Clear Filters"):
                 search_query = ""
@@ -69,14 +60,12 @@ def create_search_component():
                 st.session_state.search_state = SearchState()
                 st.rerun()
 
-        # Update session state
         st.session_state.search_state = SearchState(
             query=search_query,
             status_filter=status_filter,
             location_filter=location_filter,
         )
 
-        # Display active filters
         if status_filter != "all" or location_filter != "all":
             active_filters = []
             if status_filter != "all":
@@ -88,9 +77,8 @@ def create_search_component():
     return st.session_state.search_state
 
 
-# Updated load_guest_data function
-def load_guest_data(search_state: SearchState):
-    query = supabase.table("guests").select("*")
+def load_filtered_data(supabase, search_state: SearchState):
+    query = supabase.table("guests").select("*, brothers!inner(*)")
 
     if search_state.query:
         query = query.text_search("name_tsv", search_state.query)
@@ -105,3 +93,72 @@ def load_guest_data(search_state: SearchState):
 
     response = query.execute()
     return pd.DataFrame(response.data) if response.data else pd.DataFrame()
+
+
+def handle_guest_status_update(supabase, guest_name: str, new_status: str) -> bool:
+    try:
+        response = (
+            supabase.table("guests")
+            .update({"check_in_status": new_status})
+            .eq("name", guest_name)
+            .execute()
+        )
+        return bool(response.data)
+    except Exception as e:
+        st.error(f"Error updating guest status: {str(e)}")
+        return False
+
+
+def create_guest_list_component(supabase):
+    """
+    Creates an integrated guest list component with search and smooth button handling
+    """
+    # Create search component
+    search_state = create_search_component()
+
+    # Load filtered data
+    filtered_df = load_filtered_data(supabase, search_state)
+
+    if filtered_df.empty:
+        st.info("No guests found matching your search criteria.")
+        return
+
+    # Create a container for the guest list
+    with st.container():
+        for index, row in filtered_df.iterrows():
+            col1, col2 = st.columns([4, 1])
+
+            # Display guest information
+            col1.write(
+                f"**{row['name']}** (Brother: {row['brothers']['name']}, Status: {row['check_in_status']})"
+            )
+
+            # Generate unique key for button state
+            button_key = f"guest_button_{row['name']}_{index}"
+
+            # Initialize button state if not exists
+            if button_key not in st.session_state:
+                st.session_state[button_key] = False
+
+            is_checked_in = row["check_in_status"] == "Checked In"
+            button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
+            new_status = "Not Checked In" if is_checked_in else "Checked In"
+
+            if col2.button(
+                button_text,
+                key=button_key,
+                disabled=st.session_state[button_key],
+                use_container_width=True,
+            ):
+                # Disable button immediately
+                st.session_state[button_key] = True
+
+                # Update guest status
+                if handle_guest_status_update(supabase, row["name"], new_status):
+                    st.toast(
+                        f"Successfully {'checked out' if is_checked_in else 'checked in'} {row['name']}"
+                    )
+                    st.rerun()
+                else:
+                    # Re-enable button on failure
+                    st.session_state[button_key] = False
