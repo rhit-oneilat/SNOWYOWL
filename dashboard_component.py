@@ -44,6 +44,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     campus_breakdown = checked_in_df["campus_status"].value_counts()
     on_campus = campus_breakdown.get("On Campus", 0)
     off_campus = campus_breakdown.get("Off Campus", 0)
+    F_guests = (checked_in_df["Gender"] == "F").sum()
 
     with col3:
         st.metric(
@@ -61,6 +62,9 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
             # Brother distribution chart
             st.plotly_chart(
                 plot_brother_guest_distribution(filtered_df), use_container_width=True
+            )
+            st.plotly_chart(
+                plot_class_distribution(filtered_df), use_container_width=True
             )
 
         with col2:
@@ -99,28 +103,23 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
                 st.info("No check-in time data available")
 
         with col2:
-            # Class distribution
-            st.plotly_chart(
-                plot_class_distribution(filtered_df), use_container_width=True
+            check_in_rate = (
+                (checked_in_guests / total_guests) * 100 if total_guests > 0 else 0
+            )
+            on_campus_rate = (
+                (on_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+            )
+            woman_rate = (
+                (F_guests / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+            )
+            late_addition_rate = (
+                (late_adds / total_guests) * 100 if total_guests > 0 else 0
             )
 
-    # Detailed stats in expander
-    with st.expander("Detailed Statistics"):
-        check_in_rate = (
-            (checked_in_guests / total_guests) * 100 if total_guests > 0 else 0
-        )
-        on_campus_rate = (
-            (on_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
-        )
-        off_campus_rate = (
-            (off_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
-        )
-        late_addition_rate = (late_adds / total_guests) * 100 if total_guests > 0 else 0
-
-        st.markdown(f"""
-        ### Current Guest Statistics
-        - **Check-in Rate**: {check_in_rate:.1f}%
-        - **On-Campus Rate**: {on_campus_rate:.1f}% of checked-in guests
-        - **Off-Campus Rate**: {off_campus_rate:.1f}% of checked-in guests
-        - **Late Additions**: {late_addition_rate:.1f}% of total guests
-        """)
+            st.markdown(f"""
+            ### Current Guest Statistics
+            - **Check-in Rate**: {check_in_rate:.1f}%
+            - **On-Campus Rate**: {on_campus_rate:.1f}% of checked-in guests
+            - **Woman Rate**: {woman_rate:.1f}% of checked-in guests
+            - **Late Additions**: {late_addition_rate:.1f}% of total guests
+            """)
