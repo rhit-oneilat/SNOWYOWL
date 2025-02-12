@@ -12,7 +12,6 @@ class SearchState:
     brother_filter: str = "all"
 
 
-@st.cache_data(ttl=300)
 def _fetch_guest_data(_supabase):
     """Fetch guest data and store in cache."""
     try:
@@ -32,8 +31,21 @@ def _fetch_guest_data(_supabase):
         return pd.DataFrame()
 
 
+def refresh_guest_data():
+    """Force refresh of guest data cache."""
+    if "guest_data" in st.session_state:
+        del st.session_state.guest_data
+    st.cache_data.clear()
+
+
 def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
     """Apply search and filtering to guest data."""
+    # Check if we need to refresh data
+    if "needs_refresh" in st.session_state and st.session_state.needs_refresh:
+        refresh_guest_data()
+        st.session_state.needs_refresh = False
+
+    # Load or fetch guest data
     if "guest_data" not in st.session_state:
         st.session_state.guest_data = _fetch_guest_data(supabase)
 
@@ -41,11 +53,7 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
     if df.empty:
         return df
 
-    df["name_lower"] = df["name"].apply(lambda x: " ".join(x.split()).lower())
-    df["brother_name_lower"] = df["brothers"].apply(
-        lambda x: x["name"].lower() if isinstance(x, dict) and "name" in x else ""
-    )
-
+    # Apply filters
     if search_state.query:
         query_lower = search_state.query.lower()
         df = df[
@@ -81,16 +89,8 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str):
         )
 
         if response.data:
-            guest_index = st.session_state.guest_data[
-                st.session_state.guest_data["name"] == guest_name
-            ].index
-            if not guest_index.empty:
-                st.session_state.guest_data.at[guest_index[0], "check_in_status"] = (
-                    new_status
-                )
-                st.session_state.guest_data.at[guest_index[0], "check_in_time"] = (
-                    update_data["check_in_time"]
-                )
+            # Mark for refresh on next load
+            st.session_state.needs_refresh = True
             return True
         return False
     except Exception as e:
@@ -98,8 +98,40 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str):
         return False
 
 
+def quick_add_guest(supabase):
+    """Quick add guest UI with improved state management."""
+    with st.form("quick_add_form"):
+        new_guest_name = st.text_input("Guest Name", "")
+        host_name = st.text_input("Host (Brother Name)", "")
+        campus_status = st.selectbox("On/Off Campus", ["On Campus", "Off Campus"])
+        submit_button = st.form_submit_button("Add Guest")
+
+        if submit_button and new_guest_name and host_name:
+            response = (
+                supabase.table("guests")
+                .insert(
+                    {
+                        "name": new_guest_name,
+                        "brother": host_name,
+                        "campus_status": campus_status,
+                        "check_in_status": "Not Checked In",
+                        "late_add": 1,
+                    }
+                )
+                .execute()
+            )
+
+            if response.error:
+                st.error("Failed to add guest.")
+            else:
+                st.success(f"Guest {new_guest_name} added successfully!")
+                # Mark for refresh and rerun
+                st.session_state.needs_refresh = True
+                st.rerun()
+
+
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
-    """Guest list with better status updates."""
+    """Guest list component with improved state management."""
     if filtered_df.empty:
         st.info("No guests found.")
         return
@@ -131,10 +163,11 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
             ):
                 if handle_guest_status_update(supabase, row["name"], new_status):
                     st.toast(f"{row['name']} is now {new_status}.", icon="✅")
+                    st.rerun()
 
 
 def create_search_component() -> SearchState:
-    """Enhanced search interface with better performance."""
+    """Enhanced search interface with improved state management."""
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
@@ -183,35 +216,3 @@ def create_search_component() -> SearchState:
             st.caption(f"Active filters: {', '.join(active_filters)}")
 
     return st.session_state.search_state
-
-
-# --------- Quick Add Guest Feature ---------
-def quick_add_guest(supabase):
-    """Quick add guest UI."""
-    with st.form("quick_add_form"):
-        new_guest_name = st.text_input("Guest Name", "")
-        host_name = st.text_input("Host (Brother Name)", "")
-        campus_status = st.selectbox("On/Off Campus", ["On Campus", "Off Campus"])
-        submit_button = st.form_submit_button("Add Guest")
-
-        if submit_button and new_guest_name and host_name:
-            response = (
-                supabase.table("guests")
-                .insert(
-                    {
-                        "name": new_guest_name,
-                        "brother": host_name,  # Ensure structure matches DB
-                        "campus_status": campus_status,
-                        "check_in_status": "Not Checked In",
-                        "late_add": 1,
-                    }
-                )
-                .execute()
-            )
-
-            if response.error:
-                st.error("Failed to add guest.")
-            else:
-                st.success(f"Guest {new_guest_name} added successfully!")
-                st.cache_data.clear()
-                st.rerun()

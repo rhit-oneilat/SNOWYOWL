@@ -8,7 +8,6 @@ from visualization import (
     plot_class_distribution,
     plot_campus_distribution,
 )
-from streamlit_autorefresh import st_autorefresh  # type: ignore
 from search_component import (
     create_guest_list_component,
     create_search_component,
@@ -72,7 +71,10 @@ st.session_state.guest_data = load_initial_data()
 st.title("SNOWYOWL")
 
 # Auto-refresh every 10 seconds
-st_autorefresh(interval=10000, key="data_refresh")
+# st_autorefresh(interval=10000, key="data_refresh")
+if st.button("Refresh Data 🔄"):
+    st.session_state.guest_data = load_initial_data()
+    st.rerun()
 
 
 # Create tabs
