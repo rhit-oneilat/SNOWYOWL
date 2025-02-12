@@ -52,6 +52,10 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
     df = st.session_state.guest_data.copy()
     if df.empty:
         return df
+    df["name_lower"] = df["name"].str.lower()
+    df["brother_name_lower"] = df["brothers"].apply(
+        lambda x: x["name"].lower() if isinstance(x, dict) and "name" in x else ""
+    )
 
     # Apply filters
     if search_state.query:
