@@ -126,9 +126,9 @@ def quick_add_guest(supabase):
             )
 
             if response.error:
-                st.error("Failed to add guest.")
+                st.write("Failed to add guest.")
             else:
-                st.success(f"Guest {new_guest_name} added successfully!")
+                st.write(f"Guest {new_guest_name} added successfully!")
                 # Mark for refresh and rerun
                 st.session_state.needs_refresh = True
                 st.rerun()
