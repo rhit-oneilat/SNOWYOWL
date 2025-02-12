@@ -21,8 +21,6 @@ def _fetch_guest_data(_supabase):
             return pd.DataFrame()
 
         df = pd.DataFrame(response.data)
-
-        # Precompute lowercase names for faster searching
         df["name_lower"] = df["name"].str.lower()
         df["brother_name_lower"] = df["brothers"].apply(
             lambda x: x["name"].lower() if x else ""
@@ -43,9 +41,8 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
     if df.empty:
         return df
 
-    # Split and lowercase the name
     df["name_lower"] = df["name"].apply(lambda x: " ".join(x.split()).lower())
-    df["brother_name_lower"] = df["brother"].apply(
+    df["brother_name_lower"] = df["brothers"].apply(
         lambda x: " ".join(x.split()).lower()
     )
 
@@ -84,7 +81,6 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str):
         )
 
         if response.data:
-            # Update local data instead of refetching everything
             guest_index = st.session_state.guest_data[
                 st.session_state.guest_data["name"] == guest_name
             ].index
@@ -95,7 +91,6 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str):
                 st.session_state.guest_data.at[guest_index[0], "check_in_time"] = (
                     update_data["check_in_time"]
                 )
-
             return True
         return False
     except Exception as e:
@@ -118,7 +113,8 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
                 st.markdown(
                     f"**Brother:** {row['brothers']['name']}  \n"
                     f"**Status:** {row['check_in_status']}  \n"
-                    f"**Location:** {row['campus_status']}"
+                    f"**Location:** {row['campus_status']}\n"
+                    "---"
                 )
                 if row.get("check_in_time"):
                     st.caption(
@@ -168,7 +164,6 @@ def create_search_component() -> SearchState:
                 ),
             )
 
-        # Clear Filters Button
         if search_query or status_filter != "all" or location_filter != "all":
             if st.button("Clear Filters"):
                 st.session_state.search_state = SearchState()
@@ -189,3 +184,35 @@ def create_search_component() -> SearchState:
             st.caption(f"Active filters: {', '.join(active_filters)}")
 
     return st.session_state.search_state
+
+
+# --------- Quick Add Guest Feature ---------
+def quick_add_guest(supabase):
+    """Quick add guest UI."""
+    with st.form("quick_add_form"):
+        new_guest_name = st.text_input("Guest Name", "")
+        host_name = st.text_input("Host (Brother Name)", "")
+        campus_status = st.selectbox("On/Off Campus", ["On Campus", "Off Campus"])
+        submit_button = st.form_submit_button("Add Guest")
+
+        if submit_button and new_guest_name and host_name:
+            response = (
+                supabase.table("guests")
+                .insert(
+                    {
+                        "name": new_guest_name,
+                        "brother": host_name,  # Ensure structure matches DB
+                        "campus_status": campus_status,
+                        "check_in_status": "Not Checked In",
+                        "late_add": 1,
+                    }
+                )
+                .execute()
+            )
+
+            if response.error:
+                st.error("Failed to add guest.")
+            else:
+                st.success(f"Guest {new_guest_name} added successfully!")
+                st.cache_data.clear()
+                st.rerun()

@@ -13,6 +13,7 @@ from search_component import (
     create_guest_list_component,
     create_search_component,
     load_filtered_data,
+    quick_add_guest,
 )
 
 # Supabase credentials
@@ -119,5 +120,7 @@ with tab2:
     else:
         st.subheader("Guest List & Check-In")
         search_state = create_search_component()
-        filtered_df = load_filtered_data(supabase, search_state)
-        create_guest_list_component(supabase, filtered_df)
+        filtered_data = load_filtered_data(supabase, search_state)
+
+        quick_add_guest(supabase)
+        create_guest_list_component(supabase, filtered_data)
