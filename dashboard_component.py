@@ -106,10 +106,21 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
 
     # Detailed stats in expander
     with st.expander("Detailed Statistics"):
+        check_in_rate = (
+            (checked_in_guests / total_guests) * 100 if total_guests > 0 else 0
+        )
+        on_campus_rate = (
+            (on_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+        )
+        off_campus_rate = (
+            (off_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+        )
+        late_addition_rate = (late_adds / total_guests) * 100 if total_guests > 0 else 0
+
         st.markdown(f"""
         ### Current Guest Statistics
-        - **Check-in Rate**: {(checked_in_guests / total_guests) * 100:.1f}%
-        - **On-Campus Rate**: {(on_campus / checked_in_guests) * 100:.1f}% of checked-in guests
-        - **Off-Campus Rate**: {(off_campus / checked_in_guests) * 100:.1f}% of checked-in guests
-        - **Late Additions**: {(late_adds / total_guests) * 100:.1f}% of total guests
+        - **Check-in Rate**: {check_in_rate:.1f}%
+        - **On-Campus Rate**: {on_campus_rate:.1f}% of checked-in guests
+        - **Off-Campus Rate**: {off_campus_rate:.1f}% of checked-in guests
+        - **Late Additions**: {late_addition_rate:.1f}% of total guests
         """)
