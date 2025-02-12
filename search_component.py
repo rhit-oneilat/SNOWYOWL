@@ -126,15 +126,21 @@ def quick_add_guest(supabase):
                     .execute()
                 )
 
-                if response.get("error"):  # Check if error exists in response
-                    st.error("Failed to add guest.")
+                # Supabase APIResponse does not use `.error`. Instead, check the status code.
+                if (
+                    response.status_code >= 400
+                ):  # HTTP status codes 400+ indicate errors
+                    st.error(
+                        f"Failed to add guest. Status code: {response.status_code}"
+                    )
                 else:
                     st.success(f"Guest {new_guest_name} added successfully!")
                     # Mark for refresh and rerun
                     st.session_state.needs_refresh = True
                     st.rerun()
+
             except Exception as e:
-                st.error(f"Error adding guest: {str(e)}")
+                st.error(f"Unexpected error adding guest: {str(e)}")
 
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
