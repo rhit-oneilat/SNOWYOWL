@@ -103,7 +103,7 @@ def handle_guest_status_update(supabase, guest_name: str, new_status: str):
 
 
 def quick_add_guest(supabase):
-    """Quick add guest UI with improved state management."""
+    """Quick add guest via stored procedure."""
     with st.form("quick_add_form"):
         new_guest_name = st.text_input("Guest Name", "")
         host_name = st.text_input("Host (Brother Name)", "")
@@ -112,32 +112,21 @@ def quick_add_guest(supabase):
 
         if submit_button and new_guest_name and host_name:
             try:
-                response = (
-                    supabase.table("guests")
-                    .insert(
-                        {
-                            "name": new_guest_name,
-                            "brother": host_name,
-                            "campus_status": campus_status,
-                            "check_in_status": "Not Checked In",
-                            "late_add": 1,
-                        }
-                    )
-                    .execute()
-                )
+                response = supabase.rpc(
+                    "add_guest",
+                    {
+                        "guest_name": new_guest_name,
+                        "host_name": host_name,
+                        "campus_status": campus_status,
+                    },
+                ).execute()
 
-                # Supabase APIResponse does not use `.error`. Instead, check the status code.
-                if (
-                    response.status_code >= 400
-                ):  # HTTP status codes 400+ indicate errors
-                    st.error(
-                        f"Failed to add guest. Status code: {response.status_code}"
-                    )
-                else:
+                if response.data is None:
                     st.success(f"Guest {new_guest_name} added successfully!")
-                    # Mark for refresh and rerun
                     st.session_state.needs_refresh = True
                     st.rerun()
+                else:
+                    st.error("Failed to add guest.")
 
             except Exception as e:
                 st.error(f"Unexpected error adding guest: {str(e)}")
