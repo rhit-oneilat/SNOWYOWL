@@ -43,7 +43,7 @@ def load_filtered_data(supabase, search_state: SearchState) -> pd.DataFrame:
 
     df["name_lower"] = df["name"].apply(lambda x: " ".join(x.split()).lower())
     df["brother_name_lower"] = df["brothers"].apply(
-        lambda x: " ".join(x.split()).lower()
+        lambda x: x["name"].lower() if isinstance(x, dict) and "name" in x else ""
     )
 
     if search_state.query:
