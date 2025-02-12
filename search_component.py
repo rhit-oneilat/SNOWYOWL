@@ -112,26 +112,27 @@ def quick_add_guest(supabase):
 
         if submit_button and new_guest_name and host_name:
             try:
-                # Capitalize the guest name
-                capitalized_guest_name = new_guest_name.title()
+                # Capitalize the guest name before making the request
+                capitalized_guest_name = " ".join(
+                    word.capitalize() for word in new_guest_name.split()
+                )
 
                 response = supabase.rpc(
                     "add_guest",
                     {
-                        "guest_name": capitalized_guest_name,
+                        "guest_name": capitalized_guest_name,  # Use the capitalized name
                         "host_name": host_name,
                         "campus_status": campus_status,
                     },
                 ).execute()
 
-                # The stored procedure returns null on success
-                if response.data is None:
+                # The function now returns TRUE on success
+                if response.data and response.data[0]:
                     st.success(f"Guest {capitalized_guest_name} added successfully!")
                     st.session_state.needs_refresh = True
                     st.rerun()
                 else:
-                    # If we get here, there was likely a database error
-                    st.error(f"Failed to add guest: {response.data}")
+                    st.error("Failed to add guest. Please try again.")
 
             except Exception as e:
                 st.error(f"Unexpected error adding guest: {str(e)}")
