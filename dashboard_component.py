@@ -23,7 +23,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     late_adds = filtered_df["late_add"].sum()
 
     # Top metrics row
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(3)
 
     with col1:
         st.metric(
@@ -47,10 +47,10 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     F_guests = (checked_in_df["gender"] == "F").sum()
 
     with col3:
-        st.metric(
-            "Checked-In Location Split", f"{on_campus}/{off_campus}", "On/Off Campus"
-        )
+        st.metric("Checked-In Location Split", f"{on_campus}/{off_campus}")
 
+    with col4:
+        st.metric("Checked-In Gender Split", f"{F_guests}/{checked_in_guests}")
     # Create tabs for different chart categories
     tab1, tab2 = st.tabs(["Guest Distribution", "Time & Status"])
 
