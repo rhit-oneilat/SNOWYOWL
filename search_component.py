@@ -23,7 +23,7 @@ def _fetch_guest_data(_supabase):
         df = pd.DataFrame(response.data)
         df["name_lower"] = df["name"].str.lower()
         df["brother_name_lower"] = df["brothers"].apply(
-            lambda x: x["name"].lower() if x else ""
+            lambda x: x["name"].lower() if isinstance(x, dict) and "name" in x else ""
         )
 
         return df
