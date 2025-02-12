@@ -75,53 +75,28 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
             )
 
     with tab2:
-        col1, col2 = st.columns(2)
+        # Check-ins over time
+        st.subheader("Check-ins Over Time")
+        time_data = checked_in_df[checked_in_df["check_in_time"].notna()].copy()
+        if not time_data.empty:
+            time_data["check_in_time"] = pd.to_datetime(time_data["check_in_time"])
+            time_data = time_data.sort_values("check_in_time")
 
-        with col1:
-            # Check-ins over time
-            st.subheader("Check-ins Over Time")
-            time_data = checked_in_df[checked_in_df["check_in_time"].notna()].copy()
-            if not time_data.empty:
-                time_data["check_in_time"] = pd.to_datetime(time_data["check_in_time"])
-                time_data = time_data.sort_values("check_in_time")
+            y_values = list(range(1, len(time_data) + 1))
 
-                y_values = list(range(1, len(time_data) + 1))
-
-                fig = go.Figure(
-                    go.Scatter(
-                        x=time_data["check_in_time"],
-                        y=y_values,
-                        mode="lines",
-                        name="Cumulative Check-ins",
-                    )
+            fig = go.Figure(
+                go.Scatter(
+                    x=time_data["check_in_time"],
+                    y=y_values,
+                    mode="lines",
+                    name="Cumulative Check-ins",
                 )
-                fig.update_layout(
-                    title="Cumulative Check-ins",
-                    xaxis_title="Time",
-                    yaxis_title="Total Check-ins",
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("No check-in time data available")
-
-        with col2:
-            check_in_rate = (
-                (checked_in_guests / total_guests) * 100 if total_guests > 0 else 0
             )
-            on_campus_rate = (
-                (on_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+            fig.update_layout(
+                title="Cumulative Check-ins",
+                xaxis_title="Time",
+                yaxis_title="Total Check-ins",
             )
-            woman_rate = (
-                (F_guests / checked_in_guests) * 100 if checked_in_guests > 0 else 0
-            )
-            late_addition_rate = (
-                (late_adds / total_guests) * 100 if total_guests > 0 else 0
-            )
-
-            st.markdown(f"""
-            ### Current Guest Statistics
-            - **Check-in Rate**: {check_in_rate:.1f}%
-            - **On-Campus Rate**: {on_campus_rate:.1f}% of checked-in guests
-            - **Woman Rate**: {woman_rate:.1f}% of checked-in guests
-            - **Late Additions**: {late_addition_rate:.1f}% of total guests
-            """)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No check-in time data available")
