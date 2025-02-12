@@ -112,7 +112,6 @@ def quick_add_guest(supabase):
 
         if submit_button and new_guest_name and host_name:
             try:
-                # Convert the guest name to uppercase
                 uppercase_guest_name = new_guest_name.upper()
 
                 response = supabase.rpc(
@@ -132,7 +131,20 @@ def quick_add_guest(supabase):
                     st.error("Failed to add guest. Please try again.")
 
             except Exception as e:
-                st.error(f"Unexpected error adding guest: {str(e)}")
+                error_data = getattr(e, "error", None)
+                if error_data and isinstance(error_data, dict):
+                    if error_data.get("code") == "23503" and "brother" in str(
+                        error_data.get("details", "")
+                    ):
+                        st.error(
+                            f"Could not add guest: Brother '{host_name}' not found in the system. Please check the spelling."
+                        )
+                    else:
+                        st.error(
+                            "Could not add guest. Please check your inputs and try again."
+                        )
+                else:
+                    st.error("An unexpected error occurred. Please try again.")
 
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
