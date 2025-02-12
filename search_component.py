@@ -111,27 +111,30 @@ def quick_add_guest(supabase):
         submit_button = st.form_submit_button("Add Guest")
 
         if submit_button and new_guest_name and host_name:
-            response = (
-                supabase.table("guests")
-                .insert(
-                    {
-                        "name": new_guest_name,
-                        "brother": host_name,
-                        "campus_status": campus_status,
-                        "check_in_status": "Not Checked In",
-                        "late_add": 1,
-                    }
+            try:
+                response = (
+                    supabase.table("guests")
+                    .insert(
+                        {
+                            "name": new_guest_name,
+                            "brother": host_name,
+                            "campus_status": campus_status,
+                            "check_in_status": "Not Checked In",
+                            "late_add": 1,
+                        }
+                    )
+                    .execute()
                 )
-                .execute()
-            )
 
-            if response.error:
-                st.write("Failed to add guest.")
-            else:
-                st.write(f"Guest {new_guest_name} added successfully!")
-                # Mark for refresh and rerun
-                st.session_state.needs_refresh = True
-                st.rerun()
+                if response.get("error"):  # Check if error exists in response
+                    st.error("Failed to add guest.")
+                else:
+                    st.success(f"Guest {new_guest_name} added successfully!")
+                    # Mark for refresh and rerun
+                    st.session_state.needs_refresh = True
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Error adding guest: {str(e)}")
 
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
