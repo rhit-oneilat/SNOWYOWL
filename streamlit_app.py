@@ -1,13 +1,8 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
+from dashboard_component import create_dashboard_component
 from logic import PartyMonitor
-from visualization import (
-    plot_brother_guest_distribution,
-    plot_gender_ratio,
-    plot_class_distribution,
-    plot_campus_distribution,
-)
 from search_component import (
     create_guest_list_component,
     create_search_component,
@@ -86,35 +81,7 @@ with tab1:
         st.info("Upload guest lists to see the dashboard.")
     else:
         processed_df = st.session_state.guest_data
-        stats = st.session_state.monitor.get_real_time_stats(processed_df)
-
-        # Display metrics at the top
-        metric_cols = st.columns(len(stats))
-        for col, (key, value) in zip(metric_cols, stats.items()):
-            col.metric(key, value)
-
-        # Create two rows with two columns each for the plots
-        row1_col1, row1_col2 = st.columns(2)
-        row2_col1, row2_col2 = st.columns(2)
-
-        # Place plots in the grid
-        with row1_col1:
-            st.plotly_chart(
-                plot_brother_guest_distribution(processed_df), use_container_width=True
-            )
-
-        with row1_col2:
-            st.plotly_chart(plot_gender_ratio(processed_df), use_container_width=True)
-
-        with row2_col1:
-            st.plotly_chart(
-                plot_class_distribution(processed_df), use_container_width=True
-            )
-
-        with row2_col2:
-            st.plotly_chart(
-                plot_campus_distribution(processed_df), use_container_width=True
-            )
+        create_dashboard_component(processed_df)
 # ---------------- Guest List & Check-In Tab ----------------
 with tab2:
     if st.session_state.guest_data.empty:
