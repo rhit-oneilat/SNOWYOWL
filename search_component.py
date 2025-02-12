@@ -112,23 +112,20 @@ def quick_add_guest(supabase):
 
         if submit_button and new_guest_name and host_name:
             try:
-                # Capitalize the guest name before making the request
-                capitalized_guest_name = " ".join(
-                    word.capitalize() for word in new_guest_name.split()
-                )
+                # Convert the guest name to uppercase
+                uppercase_guest_name = new_guest_name.upper()
 
                 response = supabase.rpc(
                     "add_guest",
                     {
-                        "guest_name": capitalized_guest_name,  # Use the capitalized name
+                        "guest_name": uppercase_guest_name,
                         "host_name": host_name,
                         "campus_status": campus_status,
                     },
                 ).execute()
 
-                # The function now returns TRUE on success
-                if response.data and response.data[0]:
-                    st.success(f"Guest {capitalized_guest_name} added successfully!")
+                if response.data:
+                    st.success(f"Guest {uppercase_guest_name} added successfully!")
                     st.session_state.needs_refresh = True
                     st.rerun()
                 else:
