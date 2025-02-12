@@ -133,9 +133,7 @@ def quick_add_guest(supabase):
             except Exception as e:
                 error_data = getattr(e, "error", None)
                 if error_data and isinstance(error_data, dict):
-                    if error_data.get("code") == "23503" and "brother" in str(
-                        error_data.get("details", "")
-                    ):
+                    if "brother" in str(error_data.get("details", "")):
                         st.error(
                             f"Could not add guest: Brother '{host_name}' not found in the system. Please check the spelling."
                         )
