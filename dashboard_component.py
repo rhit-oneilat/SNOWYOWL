@@ -44,7 +44,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     campus_breakdown = checked_in_df["campus_status"].value_counts()
     on_campus = campus_breakdown.get("On Campus", 0)
     off_campus = campus_breakdown.get("Off Campus", 0)
-    F_guests = (checked_in_df["Gender"] == "F").sum()
+    F_guests = (checked_in_df["gender"] == "F").sum()
 
     with col3:
         st.metric(
