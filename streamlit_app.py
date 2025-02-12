@@ -118,9 +118,9 @@ with tab2:
     if st.session_state.guest_data.empty:
         st.info("No guest data available.")
     else:
+        st.subheader("Guest List & Check-In")
         with st.expander("Quick Add", expanded=False):
             quick_add_guest(supabase)
-        st.subheader("Search")
         search_state = create_search_component()
         filtered_data = load_filtered_data(supabase, search_state)
         create_guest_list_component(supabase, filtered_data)
