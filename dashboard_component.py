@@ -85,10 +85,12 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
                 time_data["check_in_time"] = pd.to_datetime(time_data["check_in_time"])
                 time_data = time_data.sort_values("check_in_time")
 
+                y_values = list(range(1, len(time_data) + 1))
+
                 fig = go.Figure(
                     go.Scatter(
                         x=time_data["check_in_time"],
-                        y=range(1, len(time_data) + 1),
+                        y=y_values,
                         mode="lines",
                         name="Cumulative Check-ins",
                     )
