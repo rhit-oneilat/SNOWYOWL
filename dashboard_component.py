@@ -44,13 +44,24 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     campus_breakdown = checked_in_df["campus_status"].value_counts()
     on_campus = campus_breakdown.get("On Campus", 0)
     off_campus = campus_breakdown.get("Off Campus", 0)
+    on_campus_pct = (
+        (on_campus / checked_in_guests) * 100 if checked_in_guests > 0 else 0
+    )
     F_guests = (checked_in_df["gender"] == "F").sum()
+    M_guests = (checked_in_df["gender"] == "M").sum()
+    F_pct = (F_guests / checked_in_guests) * 100 if checked_in_guests > 0 else 0
 
     with col3:
-        st.metric("Checked-In Location Split", f"{on_campus}/{off_campus}")
+        st.metric(
+            "Checked-In Location Split",
+            f"{on_campus}/{off_campus}",
+            f"{on_campus_pct:.1f}% On Campus",
+        )
 
     with col4:
-        st.metric("Checked-In Gender Split", f"{F_guests}/{checked_in_guests}")
+        st.metric(
+            "Checked-In Gender Split", f"{F_guests}/{M_guests}", f"{F_pct:.1f}% F"
+        )
     # Create tabs for different chart categories
     tab1, tab2 = st.tabs(["Live Check-Ins", "Listed Guest Distribution"])
 
