@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 from dashboard_component import create_dashboard_component
-from logic import PartyMonitor
 from search_component import (
     create_guest_list_component,
     create_search_component,
@@ -42,10 +41,6 @@ def check_auth():
 
 
 check_auth()
-
-# Initialize session state
-if "monitor" not in st.session_state:
-    st.session_state.monitor = PartyMonitor()
 
 
 # Modified to load initial data without filters
