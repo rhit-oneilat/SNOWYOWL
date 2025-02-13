@@ -15,7 +15,6 @@ SUPABASE_KEY = st.secrets["supabase"]["key"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Hardcoded username and password
 USERNAME = "door"
 PASSWORD = "pgd1848"
 
