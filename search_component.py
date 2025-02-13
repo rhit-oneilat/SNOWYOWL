@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
-@dataclass
+@dataclass(eq=True)
 class SearchState:
     query: str = ""
     status_filter: str = "all"
@@ -183,25 +183,30 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
 
 def create_search_component() -> SearchState:
     """Enhanced search interface with improved state management."""
+    # Initialize default search state if not exists
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
     with st.container():
         col1, col2 = st.columns([3, 1])
         with col1:
+            # Use key parameter to maintain state
             search_query = st.text_input(
                 "🔍 Search",
                 value=st.session_state.search_state.query,
                 placeholder="Search guests or brothers...",
+                key="search_input",
             )
 
         with st.expander("Filters", expanded=False):
+            # Use key parameter for selectboxes
             status_filter = st.selectbox(
                 "Status",
                 ["all", "checked-in", "not-checked-in"],
                 index=["all", "checked-in", "not-checked-in"].index(
                     st.session_state.search_state.status_filter
                 ),
+                key="status_filter",
             )
             location_filter = st.selectbox(
                 "Location",
@@ -209,18 +214,30 @@ def create_search_component() -> SearchState:
                 index=["all", "on-campus", "off-campus"].index(
                     st.session_state.search_state.location_filter
                 ),
+                key="location_filter",
             )
 
+        # Only show clear filters button if there are active filters
         if search_query or status_filter != "all" or location_filter != "all":
-            if st.button("Clear Filters"):
+            if st.button("Clear Filters", key="clear_filters"):
+                # Reset the search state
                 st.session_state.search_state = SearchState()
-                st.rerun()
+                # Clear the input widget states
+                st.session_state.search_input = ""
+                st.session_state.status_filter = "all"
+                st.session_state.location_filter = "all"
+                return st.session_state.search_state
 
-        st.session_state.search_state = SearchState(
+        # Update search state without triggering a rerun
+        new_search_state = SearchState(
             query=search_query,
             status_filter=status_filter,
             location_filter=location_filter,
         )
+
+        # Only update if there are actual changes
+        if new_search_state != st.session_state.search_state:
+            st.session_state.search_state = new_search_state
 
         active_filters = [
             f"Status: {status_filter}" if status_filter != "all" else "",
