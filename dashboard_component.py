@@ -59,7 +59,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
         )
 
     with col4:
-        st.metric("Checked-In Gender Split", f"{F_guests}/{M_guests}", f"{F_pct:.1f}%")
+        st.metric("Checked-In F/M", f"{F_guests}/{M_guests}", f"{F_pct:.1f}%")
     # Create tabs for different chart categories
     tab1, tab2 = st.tabs(["Live Check-Ins", "Listed Guest Distribution"])
 
