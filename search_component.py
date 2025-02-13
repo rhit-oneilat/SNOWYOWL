@@ -187,10 +187,17 @@ def create_search_component() -> SearchState:
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
+    # Handle clear filters before creating widgets
+    if (
+        "clear_filters_clicked" in st.session_state
+        and st.session_state.clear_filters_clicked
+    ):
+        st.session_state.search_state = SearchState()
+        st.session_state.clear_filters_clicked = False
+
     with st.container():
         col1, col2 = st.columns([3, 1])
         with col1:
-            # Use key parameter to maintain state
             search_query = st.text_input(
                 "🔍 Search",
                 value=st.session_state.search_state.query,
@@ -199,7 +206,6 @@ def create_search_component() -> SearchState:
             )
 
         with st.expander("Filters", expanded=False):
-            # Use key parameter for selectboxes
             status_filter = st.selectbox(
                 "Status",
                 ["all", "checked-in", "not-checked-in"],
@@ -219,14 +225,14 @@ def create_search_component() -> SearchState:
 
         # Only show clear filters button if there are active filters
         if search_query or status_filter != "all" or location_filter != "all":
-            if st.button("Clear Filters", key="clear_filters"):
-                # Reset the search state
-                st.session_state.search_state = SearchState()
-                # Clear the input widget states
-                st.session_state.search_input = ""
-                st.session_state.status_filter = "all"
-                st.session_state.location_filter = "all"
-                return st.session_state.search_state
+            if st.button(
+                "Clear Filters",
+                key="clear_filters",
+                on_click=lambda: setattr(
+                    st.session_state, "clear_filters_clicked", True
+                ),
+            ):
+                st.rerun()
 
         # Update search state without triggering a rerun
         new_search_state = SearchState(
