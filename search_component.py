@@ -108,7 +108,7 @@ def quick_add_guest(supabase):
         new_guest_name = st.text_input("Guest Name", "")
         host_name = st.text_input("Brother Name (check spelling)", "")
         campus_status = st.selectbox("On/Off Campus", ["On Campus", "Off Campus"])
-        gender = st.selectbox("Gender", ["M", "F"])
+        gender_code = st.selectbox("Gender", ["M", "F"])
         submit_button = st.form_submit_button("Add Guest")
 
         if submit_button and new_guest_name and host_name:
@@ -121,7 +121,7 @@ def quick_add_guest(supabase):
                         "guest_name": uppercase_guest_name,
                         "host_name": host_name,
                         "campus_status": campus_status,
-                        "gender": gender,
+                        "gender": gender_code,
                         "check_in_time": datetime.utcnow().isoformat(),
                     },
                 ).execute()
