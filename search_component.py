@@ -187,20 +187,20 @@ def create_search_component() -> SearchState:
     if "search_state" not in st.session_state:
         st.session_state.search_state = SearchState()
 
-    # Handle clear filters before creating widgets
-    if (
-        "clear_filters_clicked" in st.session_state
-        and st.session_state.clear_filters_clicked
-    ):
+    def clear_filters():
+        st.session_state.search_input = ""
+        st.session_state.status_filter = "all"
+        st.session_state.location_filter = "all"
         st.session_state.search_state = SearchState()
-        st.session_state.clear_filters_clicked = False
 
     with st.container():
         col1, col2 = st.columns([3, 1])
         with col1:
             search_query = st.text_input(
                 "🔍 Search",
-                value=st.session_state.search_state.query,
+                value=st.session_state.get(
+                    "search_input", ""
+                ),  # Use get() with default
                 placeholder="Search guests or brothers...",
                 key="search_input",
             )
@@ -210,7 +210,9 @@ def create_search_component() -> SearchState:
                 "Status",
                 ["all", "checked-in", "not-checked-in"],
                 index=["all", "checked-in", "not-checked-in"].index(
-                    st.session_state.search_state.status_filter
+                    st.session_state.get(
+                        "status_filter", "all"
+                    )  # Use get() with default
                 ),
                 key="status_filter",
             )
@@ -218,21 +220,17 @@ def create_search_component() -> SearchState:
                 "Location",
                 ["all", "on-campus", "off-campus"],
                 index=["all", "on-campus", "off-campus"].index(
-                    st.session_state.search_state.location_filter
+                    st.session_state.get(
+                        "location_filter", "all"
+                    )  # Use get() with default
                 ),
                 key="location_filter",
             )
 
         # Only show clear filters button if there are active filters
         if search_query or status_filter != "all" or location_filter != "all":
-            if st.button(
-                "Clear Filters",
-                key="clear_filters",
-                on_click=lambda: setattr(
-                    st.session_state, "clear_filters_clicked", True
-                ),
-            ):
-                st.rerun()
+            if st.button("Clear Filters", key="clear_filters", on_click=clear_filters):
+                pass  # The on_click handler will handle the clearing
 
         # Update search state without triggering a rerun
         new_search_state = SearchState(
