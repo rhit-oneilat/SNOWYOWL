@@ -122,6 +122,7 @@ def quick_add_guest(supabase):
                         "host_name": host_name,
                         "campus_status": campus_status,
                         "gender": gender,
+                        "check_in_time": datetime.utcnow().isoformat(),
                     },
                 ).execute()
 
