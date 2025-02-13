@@ -1,6 +1,4 @@
 plotly
 pandas
 streamlit
-streamlit-autorefresh
-rapidfuzz
 supabase

@@ -55,26 +55,6 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     tab1, tab2 = st.tabs(["Guest Distribution", "Time & Status"])
 
     with tab1:
-        # First row of charts
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # Brother distribution chart
-            st.plotly_chart(
-                plot_brother_guest_distribution(filtered_df), use_container_width=True
-            )
-            st.plotly_chart(
-                plot_class_distribution(filtered_df), use_container_width=True
-            )
-
-        with col2:
-            # Second row split into two charts
-            st.plotly_chart(plot_gender_ratio(filtered_df), use_container_width=True)
-            st.plotly_chart(
-                plot_campus_distribution(filtered_df), use_container_width=True
-            )
-
-    with tab2:
         # Check-ins over time
         st.subheader("Check-ins Over Time")
         time_data = checked_in_df[checked_in_df["check_in_time"].notna()].copy()
@@ -100,3 +80,23 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No check-in time data available")
+
+    with tab2:
+        # First row of charts
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # Brother distribution chart
+            st.plotly_chart(
+                plot_brother_guest_distribution(filtered_df), use_container_width=True
+            )
+            st.plotly_chart(
+                plot_class_distribution(filtered_df), use_container_width=True
+            )
+
+        with col2:
+            # Second row split into two charts
+            st.plotly_chart(plot_gender_ratio(filtered_df), use_container_width=True)
+            st.plotly_chart(
+                plot_campus_distribution(filtered_df), use_container_width=True
+            )
