@@ -6,7 +6,7 @@ def create_add_guest_component(supabase):
     """Component to add a new guest to the database."""
     with st.form("add_guest_form"):
         guest_name = st.text_input("Guest Name").strip()
-        host_name = st.text_input("Host Name (Check Spelling)").strip()
+        host_name = st.text_input("Brother Name (Check Spelling)").strip()
         campus_status = st.selectbox("Campus Status", ["On Campus", "Off Campus"])
         gender = st.selectbox("Gender", ["M", "F"])
         submit_button = st.form_submit_button("Add Guest")
