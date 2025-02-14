@@ -6,8 +6,8 @@ from search_component import (
     create_guest_list_component,
     create_search_component,
     load_filtered_data,
-    quick_add_guest,
 )
+from add_guest_component import create_add_guest_component
 
 # Supabase credentials
 SUPABASE_URL = st.secrets["supabase"]["url"]
@@ -42,16 +42,11 @@ def check_auth():
 check_auth()
 
 
-# Modified to load initial data without filters
+# Load initial data
 def load_initial_data():
-    response = (
-        supabase.table("guests")
-        .select("*, brothers!inner(*)")  # Use inner join to get all brothers data
-        .execute()
-    )
+    response = supabase.table("guests").select("*, brothers!inner(*)").execute()
     if response.data:
-        df = pd.DataFrame(response.data)
-        return df
+        return pd.DataFrame(response.data)
     return pd.DataFrame()
 
 
@@ -59,31 +54,32 @@ st.session_state.guest_data = load_initial_data()
 
 st.title("SNOWYOWL")
 
-# Auto-refresh every 10 seconds
-# st_autorefresh(interval=10000, key="data_refresh")
 if st.button("Refresh Data 🔄"):
     st.session_state.guest_data = load_initial_data()
     st.rerun()
 
-
 # Create tabs
-tab1, tab2 = st.tabs(["📊 Dashboard", "📜 Guest List & Check-In"])
+tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📜 Guest List & Check-In", "➕ Add Guest"])
 
-# ---------------- Dashboard Tab ----------------
+# Dashboard Tab
 with tab1:
     if st.session_state.guest_data.empty:
         st.info("Upload guest lists to see the dashboard.")
     else:
         processed_df = st.session_state.guest_data
         create_dashboard_component(processed_df)
-# ---------------- Guest List & Check-In Tab ----------------
+
+# Guest List & Check-In Tab
 with tab2:
     if st.session_state.guest_data.empty:
         st.info("No guest data available.")
     else:
         st.subheader("Guest List & Check-In")
-        with st.expander("Quick Add", expanded=False):
-            quick_add_guest(supabase)
         search_state = create_search_component()
         filtered_data = load_filtered_data(supabase, search_state)
         create_guest_list_component(supabase, filtered_data)
+
+# Add Guest Tab
+with tab3:
+    st.subheader("Add Guest")
+    create_add_guest_component(supabase)

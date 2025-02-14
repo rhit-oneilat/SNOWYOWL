@@ -1,3 +1,4 @@
+import pytz
 import streamlit as st
 import pandas as pd
 from dataclasses import dataclass
@@ -150,6 +151,7 @@ def quick_add_guest(supabase):
 
 def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
     """Guest list component with improved state management."""
+    eastern = pytz.timezone("US/Eastern")
     if filtered_df.empty:
         st.info("No guests found.")
         return
@@ -165,6 +167,7 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
                     f"**Status:** {row['check_in_status']}  \n"
                     f"**Location:** {row['campus_status']}"
                 )
+                time = pd.to_datetime(row["check_in_time"]).dt.tz_convert(eastern)
                 if row.get("check_in_time"):
                     st.caption(
                         f"Last check-in: {pd.to_datetime(row['check_in_time']).strftime('%Y-%m-%d %H:%M:%S')}"
