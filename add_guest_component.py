@@ -4,8 +4,6 @@ from datetime import datetime
 
 def create_add_guest_component(supabase):
     """Component to add a new guest to the database."""
-    st.subheader("Add a New Guest")
-
     with st.form("add_guest_form"):
         guest_name = st.text_input("Guest Name").strip()
         host_name = st.text_input("Host Name (Check Spelling)").strip()
