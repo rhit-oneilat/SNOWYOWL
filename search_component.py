@@ -167,7 +167,6 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
                     f"**Status:** {row['check_in_status']}  \n"
                     f"**Location:** {row['campus_status']}"
                 )
-                time = pd.to_datetime(row["check_in_time"]).dt.tz_convert(eastern)
                 if row.get("check_in_time"):
                     st.caption(
                         f"Last check-in: {pd.to_datetime(row['check_in_time']).strftime('%Y-%m-%d %H:%M:%S')}"
