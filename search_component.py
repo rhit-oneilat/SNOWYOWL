@@ -171,7 +171,7 @@ def create_guest_list_component(supabase, filtered_df: pd.DataFrame):
                     )
 
             is_checked_in = row["check_in_status"] == "Checked In"
-            button_text = "❌ Check Out" if is_checked_in else "✅ Check In"
+            button_text = "❌ Undo" if is_checked_in else "✅ Check In"
             new_status = "Not Checked In" if is_checked_in else "Checked In"
 
             if col2.button(
