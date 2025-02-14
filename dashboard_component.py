@@ -21,7 +21,6 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
     total_guests = len(filtered_df)
     checked_in_guests = len(filtered_df[filtered_df["check_in_status"] == "Checked In"])
     capacity_pct = (checked_in_guests / total_guests) * 100 if total_guests > 0 else 0
-    late_adds = filtered_df["late_add"].sum()
 
     # Top metrics row
     col1, col2, col3, col4 = st.columns(4)
@@ -34,11 +33,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
         )
 
     with col2:
-        st.metric(
-            "Quick Adds",
-            str(late_adds),
-            help="Number of guests added after initial list",
-        )
+        st.metric("Total + Brothers", total_guests + 95)
 
     # Campus status breakdown for checked-in guests
     checked_in_df = filtered_df[filtered_df["check_in_status"] == "Checked In"]
