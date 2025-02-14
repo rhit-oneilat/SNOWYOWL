@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import pytz
 import streamlit as st
 import pandas as pd
 
@@ -65,12 +66,20 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
 
     with tab1:
         # Check-ins over time
+        # Define the timezone conversion
+        eastern = pytz.timezone("US/Eastern")
+
         st.subheader("Check-ins Over Time")
         time_data = checked_in_df[checked_in_df["check_in_time"].notna()].copy()
         if not time_data.empty:
-            time_data["check_in_time"] = pd.to_datetime(time_data["check_in_time"])
-            time_data = time_data.sort_values("check_in_time")
+            time_data["check_in_time"] = pd.to_datetime(
+                time_data["check_in_time"], utc=True
+            )
+            time_data["check_in_time"] = time_data["check_in_time"].dt.tz_convert(
+                eastern
+            )
 
+            time_data = time_data.sort_values("check_in_time")
             y_values = list(range(1, len(time_data) + 1))
 
             fig = go.Figure(
@@ -83,7 +92,7 @@ def create_dashboard_component(filtered_df: pd.DataFrame):
             )
             fig.update_layout(
                 title="Cumulative Check-ins",
-                xaxis_title="Time",
+                xaxis_title="Time (Eastern Time)",
                 yaxis_title="Total Check-ins",
             )
             st.plotly_chart(fig, use_container_width=True)
