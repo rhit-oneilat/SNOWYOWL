@@ -1,5 +1,5 @@
+import datetime
 import streamlit as st
-from datetime import datetime
 
 
 def create_add_guest_component(supabase):
@@ -20,11 +20,13 @@ def create_add_guest_component(supabase):
                         "host_name": host_name,
                         "campus_status": campus_status,
                         "gender": gender,
-                        "check_in_time": datetime.utcnow().isoformat(),
+                        "check_in_time": datetime.datetime.utcnow().strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),  # Ensure timestamp format
                     },
                 ).execute()
 
-                if response.data:
+                if response.data is True:  # Ensure correct response handling
                     st.success(f"Guest {guest_name.upper()} added successfully!")
                     st.experimental_rerun()
                 else:
