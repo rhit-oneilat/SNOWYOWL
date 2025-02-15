@@ -30,7 +30,7 @@ def create_add_guest_component(supabase):
 
                 if response.data is True:  # Ensure correct response handling
                     st.success(f"Guest {guest_name.upper()} added successfully!")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Failed to add guest. Please try again.")
             except Exception as e:
