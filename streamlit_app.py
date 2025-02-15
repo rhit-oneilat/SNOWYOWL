@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
+from add_guest_component import create_add_guest_component
 from dashboard_component import create_dashboard_component
 from search_component import (
     create_guest_list_component,
@@ -67,7 +68,7 @@ if st.button("Refresh Data 🔄"):
 
 
 # Create tabs
-tab1, tab2 = st.tabs(["📊 Dashboard", "📜 Guest List & Check-In"])
+tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📜 Guest List & Check-In", "Add Guest"])
 
 # ---------------- Dashboard Tab ----------------
 with tab1:
@@ -87,3 +88,5 @@ with tab2:
         search_state = create_search_component()
         filtered_data = load_filtered_data(supabase, search_state)
         create_guest_list_component(supabase, filtered_data)
+with tab3:
+    create_add_guest_component(supabase)

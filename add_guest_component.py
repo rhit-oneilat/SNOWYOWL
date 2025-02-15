@@ -26,14 +26,12 @@ def create_add_guest_component(supabase):
                     },
                 ).execute()
 
+                st.write(response)  # Print full response to debug
+
                 if response.data is True:  # Ensure correct response handling
                     st.success(f"Guest {guest_name.upper()} added successfully!")
                     st.experimental_rerun()
                 else:
                     st.error("Failed to add guest. Please try again.")
             except Exception as e:
-                error_message = str(getattr(e, "error", "Unknown error"))
-                if "brother" in error_message:
-                    st.error(f"Error: Brother '{host_name}' not found. Check spelling.")
-                else:
-                    st.error("An unexpected error occurred. Please try again.")
+                st.error(f"Unexpected error: {str(e)}")  # Print full error message
